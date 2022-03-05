@@ -107,7 +107,6 @@ password = 'J@MF@P!acc3s$'
 
 headers = {
 	'accept': 'application/json',
-	'Cookie': 'APBALANCEID=aws.usw2-std-parker3-tc-15'
 }
 
 
