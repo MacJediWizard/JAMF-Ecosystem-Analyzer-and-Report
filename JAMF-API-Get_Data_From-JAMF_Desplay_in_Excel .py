@@ -13,47 +13,7 @@
 #
 #	Fields returned in csv / Excel are as follows below:
 #
-#   Policy ID
-#	Policy Name
-#
-#	Policy Category ID
-#	Policy Category Name
-#
-#	Policy Target All Computers
-#	Policy Target Computer ID
-#	Policy Target Computer Name
-#
-#	Policy Target Group ID
-#	Policy Target Group Name
-#	Policy Target Group is Smart
-#
-#	Policy Exclusion Group ID
-#	Policy Exclusion Group Name
-#	Policy Exclusion Group is Smart
-#
-#	Policy Scripts ID
-#	Policy Scripts Name
-#
-#	Policy Package ID
-#	Policy Package Name
-#
-#	Configuration Profile ID
-#	Configuration Profile Name
-#
-#	Configuration Profile Category ID
-#	Configuration Profile Category Name
-#
-#	Configuration Profile Target Computer ID
-#	Configuration Profile Target Computer Name
-#
-#	Configuration Profile Target Group ID
-#	Configuration Profile Target Group Name
-#	Configuration Profile Target Group is Smart
-#
-#	Configuration Profile Exclusion Group ID
-#	Configuration Profile Exclusion Group Name
-#	Configuration Profile Exclusion Group is Smart
-#
+
 #
 #
 #
@@ -1333,7 +1293,7 @@ for configurationProfile in configurationProfiles:
 			\
 			'Configuration Profile Exclusion Group Name':myExclusionsComputerGroupInfo['name'],\
 			\
-			'Configuration Profile Exclusion Group is Smart':str(myExclusionsComputerGroupInfo['is_smart'])})	
+			'Configuration Profile Exclusion Group is Smart':str(myExclusionsComputerGroupInfo['is_smart'])})
 		
 		
 		
