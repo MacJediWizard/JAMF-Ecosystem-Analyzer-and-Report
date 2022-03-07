@@ -13,20 +13,72 @@
 #
 #	Fields returned in csv / Excel are as follows below:
 #
-
+#
+#	Policy Record Type
+#	
+#	Policy ID
+#	Policy Name
+#	Policy Category ID
+#	Policy Category Name
+#	
+#	Policy Target All Computers
+#	
+#	Policy Target Computer ID
+#	Policy Target Computer Name
+#	
+#	Policy Target Group ID
+#	Policy Target Group Name
+#	Policy Target Group is Smart
+#	
+#	Policy Exclusion Computer ID
+#	Policy Exclusion Computer Name
+#	
+#	Policy Exclusion Group id
+#	Policy Exclusion Group Name
+#	Policy Exclusion Group is Smart
+#	
+#	Policy Package ID
+#	Policy Package Name
+#	Policy Package Category Name
+#	Policy Package Filename
+#	
+#	Policy Script ID
+#	Policy Script Name
+#	Policy Script Category Name
+#	Policy Script Filename
+#	
+#	Configuration Profile ID
+#	Configuration Profile Type
+#	Configuration Profile Name
+#	
+#	Configuration Profile Category ID
+#	Configuration Profile Category Name
+#	
+#	Configuration Profile Target Computer ID
+#	Configuration Profile Target Computer Name
+#	
+#	Configuration Profile Target Group ID
+#	Configuration Profile Target Group Name
+#	Configuration Profile Target Group is Smart
+#	
+#	Configuration Profile Exclusion Computer id
+#	Configuration Profile Exclusion Computer Name
+#
+#	Configuration Profile Exclusion Group id
+#	Configuration Profile Exclusion Group Name
+#	Configuration Profile Exclusion Group is Smart
 #
 #
 #
 #
-#	Jamf Variable Label Names
+#	Variable Label Names
 #
-#	$4 -eq JAMF Instance URL (e.g. https://<YourJamf>.jamfcloud.com)
-#	$5 -eq Your JAMF API Username
-#	$6 -eq Your JAMF API Password
+#	$1 -eq JAMF Instance URL (e.g. https://<YourJamf>.jamfcloud.com)
+#	$2 -eq Your JAMF API Username
+#	$3 -eq Your JAMF API Password
 #
-#	To test or use without using JAMF Policy you can just send 3 empty arguments 
-#	to the script. See example below.
-#	(e.g. Get-JIM-Server-Name-from-JAMF-API.sh empty1 empty2 empty3 $4 $5 $6)
+#	To test or use you can just send 3 arguments to the script. See example below.
+#	(e.g. JAMF-API-Get_Data_From-JAMF_Desplay_in_Excel.py "$1" "$2" "$3")
 #
 ##########################################################################################
 
@@ -59,26 +111,28 @@
 
 
 ##########################################################################################
-# JAMF API information
-##########################################################################################
-JAMF_url = 'https://iqvia.jamfcloud.com'
-username = 'jamf-api'
-password = 'J@MF@P!acc3s$'
-
-headers = {
-	'accept': 'application/json',
-}
-
-
-##########################################################################################
 # Imports
 ##########################################################################################
-import requests
+import requests, sys
 from requests.auth import HTTPBasicAuth
 
 #For CSV processing
 import pandas as pd
 from os.path import exists
+
+
+##########################################################################################
+# JAMF API information
+##########################################################################################
+JAMF_url = sys.argv[1]
+username = sys.argv[2]
+password = sys.argv[3]
+
+
+headers = {
+	'accept': 'application/json',
+}
+
 
 ##########################################################################################
 # Variables
@@ -140,7 +194,6 @@ for policy in policies:
 	#Scope Element For Exclusions
 	myPolicyScopeExclusionsComputers = getPolicy['policy']['scope']['exclusions']['computers']
 	myPolicyScopeExclusionsComputerGroups = getPolicy['policy']['scope']['exclusions']['computer_groups']
-	
 	
 	
 	#Package Element
@@ -1296,18 +1349,17 @@ for configurationProfile in configurationProfiles:
 			'Configuration Profile Exclusion Group is Smart':str(myExclusionsComputerGroupInfo['is_smart'])})
 		
 		
-		
 ##########################################################################################
 # Process data for Export to csv / Excel
 ##########################################################################################
 # Get export to csv file
 df = pd.DataFrame(dataToCsv)
 
-if exists('comps.csv'):
-	print('file exists')
-	df.to_csv('comps.csv',index=False, mode='a', header=False)
+if exists('Jamf_Instance_Info.csv'):
+	print('Jamf Instance	 Info file exists.')
+	df.to_csv('Jamf_Instance_Info.csv',index=False, mode='a', header=False)
 else:
-	print('file does not exist')
-	df.to_csv('comps.csv', index=False)
+	print('Jamf Instance	 Info file does not exist')
+	df.to_csv('Jamf_Instance_Info.csv', index=False)
 	
-print("complete")
+print("Jamf Instance	 Info file is now Complete")
