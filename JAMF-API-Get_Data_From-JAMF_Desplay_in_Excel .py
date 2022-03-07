@@ -151,8 +151,8 @@ for policy in policies:
 	# Get Policy ID to do JAMF API lookup
 	PolicyID = str(policy['id']) 
 	
-#	For Testing
-#	print(PolicyID)
+	#	For Testing
+	#	print(PolicyID)
 	
 	# Set up url for getting information from each policy ID from JAMF API
 	url = JAMF_url + "/JSSResource/policies/id/" + PolicyID
@@ -176,13 +176,13 @@ for policy in policies:
 	#Scope Element For Limitation
 	myPolicyScopeLimitationsUsers = getPolicy['policy']['scope']['limitations']['users']
 	myPolicyScopeLimitationsUserGroups = getPolicy['policy']['scope']['limitations']['user_groups']
-		
+	
 	#Scope Element For Exclusions
 	myPolicyScopeExclusionsComputers = getPolicy['policy']['scope']['exclusions']['computers']
 	myPolicyScopeExclusionsComputerGroups = getPolicy['policy']['scope']['exclusions']['computer_groups']
 	
-		
-		
+	
+	
 	#Package Element
 	myPackagesInfo = getPolicy['policy']['package_configuration']['packages']
 	
@@ -202,15 +202,15 @@ for policy in policies:
 	# Get info for Policies
 	print("Working on Policy ID: " + getMyPolicyID)
 	
-	dataToCsv.append({'Policy ID':str(myPolicyGeneral['id']),\
+	dataToCsv.append({'Type':'Policy',\
+		\
+		'Policy ID':str(myPolicyGeneral['id']),\
 		\
 		'Policy Name':myPolicyGeneral['name'],\
 		\
 		'Policy Category ID':str(myPolicyGeneralCatagory['id']),\
 		\
 		'Policy Category Name':f"\"{myPolicyGeneralCatagory['name']}\"",\
-		\
-		'Type':'Policy',\
 		\
 		'Policy Target All Computers':str(myPolicyScopeTargetsAllComputers),\
 		\
@@ -252,6 +252,8 @@ for policy in policies:
 		\
 		'Configuration Profile ID':'',\
 		\
+		'Configuration Profile Type':'',\
+		\
 		'Configuration Profile Name':'',\
 		\
 		'Configuration Profile Category ID':'',\
@@ -280,15 +282,15 @@ for policy in policies:
 	##########################################################################################
 	for computer in myPolicyScopeTargetsComputers:
 		
-		dataToCsv.append({'Policy ID':str(myPolicyGeneral['id']),\
+		dataToCsv.append({'Type':'Target Computers',\
+			\
+			'Policy ID':str(myPolicyGeneral['id']),\
 			\
 			'Policy Name':myPolicyGeneral['name'],\
 			\
 			'Policy Category ID':str(myPolicyGeneralCatagory['id']),\
 			\
 			'Policy Category Name':f"\"{myPolicyGeneralCatagory['name']}\"",\
-			\
-			'Type':'Target Computers',\
 			\
 			'Policy Target All Computers':'',\
 			\
@@ -330,6 +332,8 @@ for policy in policies:
 			\
 			'Configuration Profile ID':'',\
 			\
+			'Configuration Profile Type':'',\
+			\
 			'Configuration Profile Name':'',\
 			\
 			'Configuration Profile Category ID':'',\
@@ -351,8 +355,8 @@ for policy in policies:
 			'Configuration Profile Exclusion Group Name':'',\
 			\
 			'Configuration Profile Exclusion Group is Smart':''})
-	
-	
+		
+		
 	##########################################################################################
 	# Get Info for Target Computer Groups
 	##########################################################################################
@@ -372,15 +376,15 @@ for policy in policies:
 		
 		
 		# Get info for Target Computer Group
-		dataToCsv.append({'Policy ID':str(myPolicyGeneral['id']),\
+		dataToCsv.append({'Type':'Target Computer Group',\
+			\
+			'Policy ID':str(myPolicyGeneral['id']),\
 			\
 			'Policy Name':myPolicyGeneral['name'],\
 			\
 			'Policy Category ID':str(myPolicyGeneralCatagory['id']),\
 			\
 			'Policy Category Name':f"\"{myPolicyGeneralCatagory['name']}\"",\
-			\
-			'Type':'Target Computer Group',\
 			\
 			'Policy Target All Computers':'',\
 			\
@@ -422,6 +426,8 @@ for policy in policies:
 			\
 			'Configuration Profile ID':'',\
 			\
+			'Configuration Profile Type':'',\
+			\
 			'Configuration Profile Name':'',\
 			\
 			'Configuration Profile Category ID':'',\
@@ -450,15 +456,15 @@ for policy in policies:
 	##########################################################################################
 	for exclusion in myPolicyScopeExclusionsComputers:
 		
-		dataToCsv.append({'Policy ID':str(myPolicyGeneral['id']),\
+		dataToCsv.append({'Type':'Target Computers',\
+			\
+			'Policy ID':str(myPolicyGeneral['id']),\
 			\
 			'Policy Name':myPolicyGeneral['name'],\
 			\
 			'Policy Category ID':str(myPolicyGeneralCatagory['id']),\
 			\
 			'Policy Category Name':f"\"{myPolicyGeneralCatagory['name']}\"",\
-			\
-			'Type':'Target Computers',\
 			\
 			'Policy Target All Computers':myPolicyScopeTargetsAllComputers,\
 			\
@@ -500,6 +506,8 @@ for policy in policies:
 			\
 			'Configuration Profile ID':'',\
 			\
+			'Configuration Profile Type':'',\
+			\
 			'Configuration Profile Name':'',\
 			\
 			'Configuration Profile Category ID':'',\
@@ -521,8 +529,8 @@ for policy in policies:
 			'Configuration Profile Exclusion Group Name':'',\
 			\
 			'Configuration Profile Exclusion Group is Smart':''})
-	
-	
+		
+		
 	##########################################################################################
 	#Get Info for Computer Exclusions groups
 	##########################################################################################
@@ -540,15 +548,15 @@ for policy in policies:
 		myExclusionsComputerGroupInfo = getExclusionGroupData['computer_group']
 		
 		
-		dataToCsv.append({'Policy ID':str(myPolicyGeneral['id']),\
+		dataToCsv.append({'Type':'Exclusion Computer Groups',\
+			\
+			'Policy ID':str(myPolicyGeneral['id']),\
 			\
 			'Policy Name':myPolicyGeneral['name'],\
 			\
 			'Policy Category ID':str(myPolicyGeneralCatagory['id']),\
 			\
 			'Policy Category Name':f"\"{myPolicyGeneralCatagory['name']}\"",\
-			\
-			'Type':'Exclusion Computer Groups',\
 			\
 			'Policy Target All Computers':'',\
 			\
@@ -590,6 +598,8 @@ for policy in policies:
 			\
 			'Configuration Profile ID':'',\
 			\
+			'Configuration Profile Type':'',\
+			\
 			'Configuration Profile Name':'',\
 			\
 			'Configuration Profile Category ID':'',\
@@ -611,13 +621,13 @@ for policy in policies:
 			'Configuration Profile Exclusion Group Name':'',\
 			\
 			'Configuration Profile Exclusion Group is Smart':''})
-	
-	
+		
+		
 	##########################################################################################
 	#Get Info for Packages in Policy
 	##########################################################################################
 	for package in myPackagesInfo:
-			
+		
 		packageID = str(package['id'])
 		
 		#Get Group Info from JAMF API
@@ -630,15 +640,15 @@ for policy in policies:
 		myPackageInfo = getPackageData['package']
 		
 		
-		dataToCsv.append({'Policy ID':str(myPolicyGeneral['id']),\
+		dataToCsv.append({'Type':'Packages',\
+			\
+			'Policy ID':str(myPolicyGeneral['id']),\
 			\
 			'Policy Name':myPolicyGeneral['name'],\
 			\
 			'Policy Category ID':str(myPolicyGeneralCatagory['id']),\
 			\
 			'Policy Category Name':f"\"{myPolicyGeneralCatagory['name']}\"",\
-			\
-			'Type':'Packages',\
 			\
 			'Policy Target All Computers':'',\
 			\
@@ -680,6 +690,8 @@ for policy in policies:
 			\
 			'Configuration Profile Category ID':'',\
 			\
+			'Configuration Profile Type':'',\
+			\
 			'Configuration Profile Category Name':'',\
 			\
 			'Configuration Profile Target Computer ID':'',\
@@ -697,8 +709,8 @@ for policy in policies:
 			'Configuration Profile Exclusion Group Name':'',\
 			\
 			'Configuration Profile Exclusion Group is Smart':''})
-	
-	
+		
+		
 	##########################################################################################
 	#Get Info for scripts in Policy
 	##########################################################################################
@@ -716,15 +728,15 @@ for policy in policies:
 		myScriptInfo = getScriptData['script']
 		
 		
-		dataToCsv.append({'Policy ID':str(myPolicyGeneral['id']),\
+		dataToCsv.append({'Type':'Scripts',\
+			\
+			'Policy ID':str(myPolicyGeneral['id']),\
 			\
 			'Policy Name':myPolicyGeneral['name'],\
 			\
 			'Policy Category ID':str(myPolicyGeneralCatagory['id']),\
 			\
 			'Policy Category Name':f"\"{myPolicyGeneralCatagory['name']}\"",\
-			\
-			'Type':'Scripts',\
 			\
 			'Policy Target All Computers':'',\
 			\
@@ -766,6 +778,8 @@ for policy in policies:
 			\
 			'Configuration Profile ID':'',\
 			\
+			'Configuration Profile Type':'',\
+			\
 			'Configuration Profile Name':'',\
 			\
 			'Configuration Profile Category ID':'',\
@@ -787,63 +801,491 @@ for policy in policies:
 			'Configuration Profile Exclusion Group Name':'',\
 			\
 			'Configuration Profile Exclusion Group is Smart':''})
-		
-		
-#		##########################################################################################
-#		# Process Configuration Profilesinformation for csv / Excel
-#		##########################################################################################
-#		# Set up url for getting a list of all Configuration Profiles from JAMF API
-#url = JAMF_url + "/JSSResource/osxconfigurationprofiles"
-#
-#response = requests.request("GET", url, headers=headers, auth = HTTPBasicAuth(username, password))
-#
-#resp = response.json()
-#
-## For Testing
-##print(response.json())
-#
-#configurationProfiles = resp['os_x_configuration_profiles']
-#
-#configurationProfiles.sort(key=lambda item: item.get('id'), reverse=False)
-#
-## Process Configuration Profile List and get information linked to Configuration Profiles
-#for configurationProfile in configurationProfiles:
-#	
-#	# Get configurationProfile ID to do JAMF API lookup
-#	configurationProfileID = str(configurationProfile['id']) 
-#	
-#	#	For Testing
-#	#	print(configurationProfileID)
-#	
-#	# Set up url for getting information from each configurationProfile ID from JAMF API
-#	url = JAMF_url + "/JSSResource/osxconfigurationprofiles/id/" + configurationProfileID
-#	
-#	configurationProfileData = requests.request("GET", url, headers=headers, auth = HTTPBasicAuth(username, password))
-#	
-#	getconfigurationProfile = configurationProfileData.json()
-#	
-#	# For Testing
-#	#print(getconfigurationProfile)
-#	
-#	#General Element for ID and Catagory
-#	myconfigurationProfileGeneral = getconfigurationProfile['os_x_configuration_profile']['general']
-#	myconfigurationProfileGeneralCatagory = getconfigurationProfile['os_x_configuration_profile']['general']['category']
-#	
-#	#Scope Element for Computer Targets
-#	myconfigurationProfileScopeTargetsAllComputers = getconfigurationProfile['os_x_configuration_profile']['scope']['all_computers']
-#	myconfigurationProfileScopeTargetsComputers = getconfigurationProfile['os_x_configuration_profile']['scope']['computers']
-#	myconfigurationProfileScopeTargetsComputerGroups = getconfigurationProfile['os_x_configuration_profile']['scope']['computer_groups']
-#	
-#	#Scope Element For Limitation
-#	myconfigurationProfileScopeLimitationsUsers = getconfigurationProfile['os_x_configuration_profile']['scope']['limitations']['users']
-#	myconfigurationProfileScopeLimitationsUserGroups = getconfigurationProfile['os_x_configuration_profile']['scope']['limitations']['user_groups']
-#	
-#	#Scope Element For Exclusions
-#	myconfigurationProfileScopeExclusionsComputerGroups = getconfigurationProfile['os_x_configuration_profile']['scope']['exclusions']['computers']
-#	myconfigurationProfileScopeExclusionsComputerGroups = getconfigurationProfile['os_x_configuration_profile']['scope']['exclusions']['computer_groups']
+
+
+##########################################################################################
+# Process Configuration Profilesinformation for csv / Excel
+##########################################################################################
+# Set up url for getting a list of all Configuration Profiles from JAMF API
+url = JAMF_url + "/JSSResource/osxconfigurationprofiles"
+
+response = requests.request("GET", url, headers=headers, auth = HTTPBasicAuth(username, password))
+
+resp = response.json()
+
+# For Testing
+#print(response.json())
+
+configurationProfiles = resp['os_x_configuration_profiles']
+
+configurationProfiles.sort(key=lambda item: item.get('id'), reverse=False)
+
+# Process Configuration Profile List and get information linked to Configuration Profiles
+for configurationProfile in configurationProfiles:
+	
+	# Get configurationProfile ID to do JAMF API lookup
+	configurationProfileID = str(configurationProfile['id']) 
+	
+	#	For Testing
+	#	print(configurationProfileID)
+	
+	# Set up url for getting information from each configurationProfile ID from JAMF API
+	url = JAMF_url + "/JSSResource/osxconfigurationprofiles/id/" + configurationProfileID
+	
+	configurationProfileData = requests.request("GET", url, headers=headers, auth = HTTPBasicAuth(username, password))
+	
+	getConfigurationProfile = configurationProfileData.json()
+	
+	# For Testing
+	#print(getConfigurationProfile)
+	
+	#General Element for ID and Catagory
+	myConfigurationProfileGeneral = getConfigurationProfile['os_x_configuration_profile']['general']
+	myConfigurationProfileGeneralCatagory = getConfigurationProfile['os_x_configuration_profile']['general']['category']
+	
+	#Scope Element for Computer Targets
+	myConfigurationProfileScopeTargetsAllComputers = getConfigurationProfile['os_x_configuration_profile']['scope']['all_computers']
+	myConfigurationProfileScopeTargetsComputers = getConfigurationProfile['os_x_configuration_profile']['scope']['computers']
+	myConfigurationProfileScopeTargetsComputerGroups = getConfigurationProfile['os_x_configuration_profile']['scope']['computer_groups']
+	
+	#Scope Element For Limitation
+	myConfigurationProfileScopeLimitationsUsers = getConfigurationProfile['os_x_configuration_profile']['scope']['limitations']['users']
+	myConfigurationProfileScopeLimitationsUserGroups = getConfigurationProfile['os_x_configuration_profile']['scope']['limitations']['user_groups']
+	
+	#Scope Element For Exclusions
+	myConfigurationProfileScopeExclusionsComputers = getConfigurationProfile['os_x_configuration_profile']['scope']['exclusions']['computers']
+	myConfigurationProfileScopeExclusionsComputerGroups = getConfigurationProfile['os_x_configuration_profile']['scope']['exclusions']['computer_groups']
+	
+	##########################################################################################
+	# Process ConfigurationProfile information for csv / Excel
+	##########################################################################################
+	
+	# Individual ConfigurationProfile Info for each record
+	getMyConfigurationProfileID = (str(myConfigurationProfileGeneral['id']) + " - " + myConfigurationProfileGeneral['name'])
+	getMyConfigurationProfileGeneralCatagory = (str(myConfigurationProfileGeneralCatagory['id']) + " - " + myConfigurationProfileGeneralCatagory['name'])
+	
+	# Get info for Policies
+	print("Working on Configuration Profile ID: " + getMyConfigurationProfileID)
+	
+	dataToCsv.append({'Type':'Configuration Profile',\
+		\
+		'Policy ID':'',\
+		\
+		'Policy Name':'',\
+		\
+		'Policy Category ID':'',\
+		\
+		'Policy Category Name':'',\
+		\
+		'Policy Target All Computers':'',\
+		\
+		'Policy Target Computer ID':'',\
+		\
+		'Policy Target Computer Name':'',\
+		\
+		'Policy Target Group ID':'',\
+		\
+		'Policy Target Group Name':'',\
+		\
+		'Policy Target Group is Smart':'',\
+		\
+		'Policy Exclusion Computer ID':'',\
+		\
+		'Policy Exclusion Computer Name':'',\
+		\
+		'Policy Exclusion Group id':'',\
+		\
+		'Policy Exclusion Group Name':'',\
+		\
+		'Policy Exclusion Group is Smart':'',\
+		\
+		'Policy Package ID':'',\
+		\
+		'Policy Package Name':'',\
+		\
+		'Policy Package Category Name':'',\
+		\
+		'Policy Package Filename':'',\
+		\
+		'Policy Script ID':'',\
+		\
+		'Policy Script Name':'',\
+		\
+		'Policy Script Category Name':'',\
+		\
+		'Policy Script Filename':'',\
+		\
+		'Configuration Profile ID':str(myConfigurationProfileGeneral['id']),\
+		\
+		'Configuration Profile Type':'Configuration Profile',\
+		\
+		'Configuration Profile Name':myConfigurationProfileGeneral['name'],\
+		\
+		'Configuration Profile Category ID':str(myConfigurationProfileGeneralCatagory['id']),\
+		\
+		'Configuration Profile Category Name':f"\"{myConfigurationProfileGeneralCatagory['name']}\"",\
+		\
+		'Configuration Profile Target Computer ID':'',\
+		\
+		'Configuration Profile Target Computer Name':'',\
+		\
+		'Configuration Profile Target Group ID':'',\
+		\
+		'Configuration Profile Target Group Name':'',\
+		\
+		'Configuration Profile Target Group is Smart':'',\
+		\
+		'Configuration Profile Exclusion Group id':'',\
+		\
+		'Configuration Profile Exclusion Group Name':'',\
+		\
+		'Configuration Profile Exclusion Group is Smart':''})
 	
 	
+	##########################################################################################		
+	# Get info for Target Computers	
+	##########################################################################################
+	for computer in myConfigurationProfileScopeTargetsComputers:
 		
+		dataToCsv.append({'Type':'Configuration Profile Target Computers',\
+			\
+			'Policy Name':'',\
+			\
+			'Policy Category ID':'',\
+			\
+			'Policy Category Name':'',\
+			\
+			'Type':'Configuration Profile',\
+			\
+			'Policy Target All Computers':'',\
+			\
+			'Policy Target Computer ID':'',\
+			\
+			'Policy Target Computer Name':'',\
+			\
+			'Policy Target Group ID':'',\
+			\
+			'Policy Target Group Name':'',\
+			\
+			'Policy Target Group is Smart':'',\
+			\
+			'Policy Exclusion Computer ID':'',\
+			\
+			'Policy Exclusion Computer Name':'',\
+			\
+			'Policy Exclusion Group id':'',\
+			\
+			'Policy Exclusion Group Name':'',\
+			\
+			'Policy Exclusion Group is Smart':'',\
+			\
+			'Policy Package ID':'',\
+			\
+			'Policy Package Name':'',\
+			\
+			'Policy Package Category Name':'',\
+			\
+			'Policy Package Filename':'',\
+			\
+			'Policy Script ID':'',\
+			\
+			'Policy Script Name':'',\
+			\
+			'Policy Script Category Name':'',\
+			\
+			'Policy Script Filename':'',\
+			\
+			'Configuration Profile ID':str(myConfigurationProfileGeneral['id']),\
+			\
+			'Configuration Profile Type':'Configuration Profile Target Computers',\
+			\
+			'Configuration Profile Name':myConfigurationProfileGeneral['name'],\
+			\
+			'Configuration Profile Category ID':str(myConfigurationProfileGeneralCatagory['id']),\
+			\
+			'Configuration Profile Category Name':f"\"{myConfigurationProfileGeneralCatagory['name']}\"",\
+			\
+			'Configuration Profile Target Computer ID':str(computer['id']),\
+			\
+			'Configuration Profile Target Computer Name':computer['name'],\
+			\
+			'Configuration Profile Target Group ID':'',\
+			\
+			'Configuration Profile Target Group Name':'',\
+			\
+			'Configuration Profile Target Group is Smart':'',\
+			\
+			'Configuration Profile Exclusion Group id':'',\
+			\
+			'Configuration Profile Exclusion Group Name':'',\
+			\
+			'Configuration Profile Exclusion Group is Smart':''})
+		
+		
+	##########################################################################################
+	# Get Info for Target Computer Groups
+	##########################################################################################
+	for target in myConfigurationProfileScopeTargetsComputerGroups:
+		
+		targetGroupID = str(target['id'])
+		
+		#Get Group Info from JAMF API
+		url = JAMF_url + "/JSSResource/computergroups/id/" + targetGroupID
+		
+		targetGroupData = requests.request("GET", url, headers=headers, auth = HTTPBasicAuth(username, password))
+		
+		getTargetGroupData = targetGroupData.json()
+		
+		#Computer Group Element for Target Groups
+		myTargetsComputerGroupInfo = getTargetGroupData['computer_group']
+		
+		
+		# Get info for Target Computer Group
+		dataToCsv.append({'Type':'Configuration Profile Target Computer Group',\
+			\
+			'Policy Name':'',\
+			\
+			'Policy Category ID':'',\
+			\
+			'Policy Category Name':'',\
+			\
+			'Type':'Configuration Profile',\
+			\
+			'Policy Target All Computers':'',\
+			\
+			'Policy Target Computer ID':'',\
+			\
+			'Policy Target Computer Name':'',\
+			\
+			'Policy Target Group ID':'',\
+			\
+			'Policy Target Group Name':'',\
+			\
+			'Policy Target Group is Smart':'',\
+			\
+			'Policy Exclusion Computer ID':'',\
+			\
+			'Policy Exclusion Computer Name':'',\
+			\
+			'Policy Exclusion Group id':'',\
+			\
+			'Policy Exclusion Group Name':'',\
+			\
+			'Policy Exclusion Group is Smart':'',\
+			\
+			'Policy Package ID':'',\
+			\
+			'Policy Package Name':'',\
+			\
+			'Policy Package Category Name':'',\
+			\
+			'Policy Package Filename':'',\
+			\
+			'Policy Script ID':'',\
+			\
+			'Policy Script Name':'',\
+			\
+			'Policy Script Category Name':'',\
+			\
+			'Policy Script Filename':'',\
+			\
+			'Configuration Profile ID':str(myConfigurationProfileGeneral['id']),\
+			\
+			'Configuration Profile Type':'Configuration Profile Target Computer Group',\
+			\
+			'Configuration Profile Name':myConfigurationProfileGeneral['name'],\
+			\
+			'Configuration Profile Category ID':str(myConfigurationProfileGeneralCatagory['id']),\
+			\
+			'Configuration Profile Category Name':f"\"{myConfigurationProfileGeneralCatagory['name']}\"",\
+			\
+			'Configuration Profile Target Computer ID':'',\
+			\
+			'Configuration Profile Target Computer Name':'',\
+			\
+			'Configuration Profile Target Group ID':str(myTargetsComputerGroupInfo['id']),\
+			\
+			'Configuration Profile Target Group Name':myTargetsComputerGroupInfo['name'],\
+			\
+			'Configuration Profile Target Group is Smart':str(myTargetsComputerGroupInfo['is_smart']),\
+			\
+			'Configuration Profile Exclusion Group id':'',\
+			\
+			'Configuration Profile Exclusion Group Name':'',\
+			\
+			'Configuration Profile Exclusion Group is Smart':''})
+		
+		
+	##########################################################################################
+	# Get info for exclusion Computers
+	##########################################################################################
+	for exclusion in myConfigurationProfileScopeExclusionsComputers:
+		
+		dataToCsv.append({'Type':'Configuration Profile Exclusion Computers',\
+			\
+			'Policy Name':'',\
+			\
+			'Policy Category ID':'',\
+			\
+			'Policy Category Name':'',\
+			\
+			'Type':'Configuration Profile',\
+			\
+			'Policy Target All Computers':'',\
+			\
+			'Policy Target Computer ID':'',\
+			\
+			'Policy Target Computer Name':'',\
+			\
+			'Policy Target Group ID':'',\
+			\
+			'Policy Target Group Name':'',\
+			\
+			'Policy Target Group is Smart':'',\
+			\
+			'Policy Exclusion Computer ID':'',\
+			\
+			'Policy Exclusion Computer Name':'',\
+			\
+			'Policy Exclusion Group id':'',\
+			\
+			'Policy Exclusion Group Name':'',\
+			\
+			'Policy Exclusion Group is Smart':'',\
+			\
+			'Policy Package ID':'',\
+			\
+			'Policy Package Name':'',\
+			\
+			'Policy Package Category Name':'',\
+			\
+			'Policy Package Filename':'',\
+			\
+			'Policy Script ID':'',\
+			\
+			'Policy Script Name':'',\
+			\
+			'Policy Script Category Name':'',\
+			\
+			'Policy Script Filename':'',\
+			\
+			'Configuration Profile ID':str(myConfigurationProfileGeneral['id']),\
+			\
+			'Configuration Profile Type':'Configuration Profile Exclusion Computers',\
+			\
+			'Configuration Profile Name':myConfigurationProfileGeneral['name'],\
+			\
+			'Configuration Profile Category ID':str(myConfigurationProfileGeneralCatagory['id']),\
+			\
+			'Configuration Profile Category Name':f"\"{myConfigurationProfileGeneralCatagory['name']}\"",\
+			\
+			'Configuration Profile Target Computer ID':'',\
+			\
+			'Configuration Profile Target Computer Name':'',\
+			\
+			'Configuration Profile Target Group ID':'',\
+			\
+			'Configuration Profile Target Group Name':'',\
+			\
+			'Configuration Profile Target Group is Smart':'',\
+			\
+			'Configuration Profile Exclusion Group id':str(exclusion['id']),\
+			\
+			'Configuration Profile Exclusion Group Name':exclusion['name'],\
+			\
+			'Configuration Profile Exclusion Group is Smart':''})
+		
+		
+	##########################################################################################
+	#Get Info for Computer Exclusions groups
+	##########################################################################################
+	for exclusion in myConfigurationProfileScopeExclusionsComputerGroups:
+		
+		exclusionGroupID = str(exclusion['id'])
+		
+		#Get Group Info from JAMF API
+		url = JAMF_url + "/JSSResource/computergroups/id/" + exclusionGroupID
+		
+		exclusionGroupData = requests.request("GET", url, headers=headers, auth = HTTPBasicAuth(username, password))
+		
+		getExclusionGroupData = exclusionGroupData.json()
+		
+		myExclusionsComputerGroupInfo = getExclusionGroupData['computer_group']
+		
+		
+		dataToCsv.append({'Type':'Configuration Profile Exclusion Computer Groups',\
+			\
+			'Policy Name':'',\
+			\
+			'Policy Category ID':'',\
+			\
+			'Policy Category Name':'',\
+			\
+			'Type':'Configuration Profile',\
+			\
+			'Policy Target All Computers':'',\
+			\
+			'Policy Target Computer ID':'',\
+			\
+			'Policy Target Computer Name':'',\
+			\
+			'Policy Target Group ID':'',\
+			\
+			'Policy Target Group Name':'',\
+			\
+			'Policy Target Group is Smart':'',\
+			\
+			'Policy Exclusion Computer ID':'',\
+			\
+			'Policy Exclusion Computer Name':'',\
+			\
+			'Policy Exclusion Group id':'',\
+			\
+			'Policy Exclusion Group Name':'',\
+			\
+			'Policy Exclusion Group is Smart':'',\
+			\
+			'Policy Package ID':'',\
+			\
+			'Policy Package Name':'',\
+			\
+			'Policy Package Category Name':'',\
+			\
+			'Policy Package Filename':'',\
+			\
+			'Policy Script ID':'',\
+			\
+			'Policy Script Name':'',\
+			\
+			'Policy Script Category Name':'',\
+			\
+			'Policy Script Filename':'',\
+			\
+			'Configuration Profile ID':str(myConfigurationProfileGeneral['id']),\
+			\
+			'Configuration Profile Type':'Configuration Profile Exclusion Computer Groups',\
+			\
+			'Configuration Profile Name':myConfigurationProfileGeneral['name'],\
+			\
+			'Configuration Profile Category ID':str(myConfigurationProfileGeneralCatagory['id']),\
+			\
+			'Configuration Profile Category Name':f"\"{myConfigurationProfileGeneralCatagory['name']}\"",\
+			\
+			'Configuration Profile Target Computer ID':'',\
+			\
+			'Configuration Profile Target Computer Name':'',\
+			\
+			'Configuration Profile Target Group ID':'',\
+			\
+			'Configuration Profile Target Group Name':'',\
+			\
+			'Configuration Profile Target Group is Smart':'',\
+			\
+			'Configuration Profile Exclusion Group id':str(myExclusionsComputerGroupInfo['id']),\
+			\
+			'Configuration Profile Exclusion Group Name':myExclusionsComputerGroupInfo['name'],\
+			\
+			'Configuration Profile Exclusion Group is Smart':str(myExclusionsComputerGroupInfo['is_smart'])})	
 		
 		
 		
