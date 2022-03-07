@@ -270,6 +270,10 @@ for policy in policies:
 		\
 		'Configuration Profile Target Group is Smart':'',\
 		\
+		'Configuration Profile Exclusion Computer id':'',\
+		\
+		'Configuration Profile Exclusion Computer Name':'',\
+		\
 		'Configuration Profile Exclusion Group id':'',\
 		\
 		'Configuration Profile Exclusion Group Name':'',\
@@ -349,6 +353,10 @@ for policy in policies:
 			'Configuration Profile Target Group Name':'',\
 			\
 			'Configuration Profile Target Group is Smart':'',\
+			\
+			'Configuration Profile Exclusion Computer id':'',\
+			\
+			'Configuration Profile Exclusion Computer Name':'',\
 			\
 			'Configuration Profile Exclusion Group id':'',\
 			\
@@ -444,6 +452,10 @@ for policy in policies:
 			\
 			'Configuration Profile Target Group is Smart':'',\
 			\
+			'Configuration Profile Exclusion Computer id':'',\
+			\
+			'Configuration Profile Exclusion Computer Name':'',\
+			\
 			'Configuration Profile Exclusion Group id':'',\
 			\
 			'Configuration Profile Exclusion Group Name':'',\
@@ -523,6 +535,10 @@ for policy in policies:
 			'Configuration Profile Target Group Name':'',\
 			\
 			'Configuration Profile Target Group is Smart':'',\
+			\
+			'Configuration Profile Exclusion Computer id':'',\
+			\
+			'Configuration Profile Exclusion Computer Name':'',\
 			\
 			'Configuration Profile Exclusion Group id':'',\
 			\
@@ -616,6 +632,10 @@ for policy in policies:
 			\
 			'Configuration Profile Target Group is Smart':'',\
 			\
+			'Configuration Profile Exclusion Computer id':'',\
+			\
+			'Configuration Profile Exclusion Computer Name':'',\
+			\
 			'Configuration Profile Exclusion Group id':'',\
 			\
 			'Configuration Profile Exclusion Group Name':'',\
@@ -703,6 +723,10 @@ for policy in policies:
 			'Configuration Profile Target Group Name':'',\
 			\
 			'Configuration Profile Target Group is Smart':'',\
+			\
+			'Configuration Profile Exclusion Computer id':'',\
+			\
+			'Configuration Profile Exclusion Computer Name':'',\
 			\
 			'Configuration Profile Exclusion Group id':'',\
 			\
@@ -795,6 +819,10 @@ for policy in policies:
 			'Configuration Profile Target Group Name':'',\
 			\
 			'Configuration Profile Target Group is Smart':'',\
+			\
+			'Configuration Profile Exclusion Computer id':'',\
+			\
+			'Configuration Profile Exclusion Computer Name':'',\
 			\
 			'Configuration Profile Exclusion Group id':'',\
 			\
@@ -935,6 +963,10 @@ for configurationProfile in configurationProfiles:
 		\
 		'Configuration Profile Target Group is Smart':'',\
 		\
+		'Configuration Profile Exclusion Computer id':'',\
+		\
+		'Configuration Profile Exclusion Computer Name':'',\
+		\
 		'Configuration Profile Exclusion Group id':'',\
 		\
 		'Configuration Profile Exclusion Group Name':'',\
@@ -1014,6 +1046,10 @@ for configurationProfile in configurationProfiles:
 			'Configuration Profile Target Group Name':'',\
 			\
 			'Configuration Profile Target Group is Smart':'',\
+			\
+			'Configuration Profile Exclusion Computer id':'',\
+			\
+			'Configuration Profile Exclusion Computer Name':'',\
 			\
 			'Configuration Profile Exclusion Group id':'',\
 			\
@@ -1109,6 +1145,10 @@ for configurationProfile in configurationProfiles:
 			\
 			'Configuration Profile Target Group is Smart':str(myTargetsComputerGroupInfo['is_smart']),\
 			\
+			'Configuration Profile Exclusion Computer id':'',\
+			\
+			'Configuration Profile Exclusion Computer Name':'',\
+			\
 			'Configuration Profile Exclusion Group id':'',\
 			\
 			'Configuration Profile Exclusion Group Name':'',\
@@ -1189,9 +1229,13 @@ for configurationProfile in configurationProfiles:
 			\
 			'Configuration Profile Target Group is Smart':'',\
 			\
-			'Configuration Profile Exclusion Group id':str(exclusion['id']),\
+			'Configuration Profile Exclusion Computer id':str(exclusion['id']),\
 			\
-			'Configuration Profile Exclusion Group Name':exclusion['name'],\
+			'Configuration Profile Exclusion Computer Name':exclusion['name'],\
+			\
+			'Configuration Profile Exclusion Group id':'',\
+			\
+			'Configuration Profile Exclusion Group Name':'',\
 			\
 			'Configuration Profile Exclusion Group is Smart':''})
 		
@@ -1280,6 +1324,10 @@ for configurationProfile in configurationProfiles:
 			'Configuration Profile Target Group Name':'',\
 			\
 			'Configuration Profile Target Group is Smart':'',\
+			\
+			'Configuration Profile Exclusion Computer id':'',\
+			\
+			'Configuration Profile Exclusion Computer Name':'',\
 			\
 			'Configuration Profile Exclusion Group id':str(myExclusionsComputerGroupInfo['id']),\
 			\
