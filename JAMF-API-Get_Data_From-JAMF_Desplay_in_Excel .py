@@ -713,9 +713,9 @@ for policy in policies:
 			\
 			'Policy Package Filename':myPackageInfo['filename'],\
 			\
-			'Policy Scripts ID':'',\
+			'Policy Script ID':'',\
 			\
-			'Policy Scripts Name':'',\
+			'Policy Script Name':'',\
 			\
 			'Configuration Profile ID':'',\
 			\
