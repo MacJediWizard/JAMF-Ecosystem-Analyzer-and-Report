@@ -68,6 +68,6 @@ exampleScript.py "JAMF_Instance_URL" "Your_JAMF_API_Username" "Your_JAMF_API_Pas
 
 ### Variable Description:
 
-sys.argv[1] -eq JAMF Instance URL (e.g. https://<YourJamf>.jamfcloud.com)
-sys.argv[2] -eq Your JAMF API Username
-sys.argv[3] -eq Your JAMF API Password
+	sys.argv[1] -eq JAMF Instance URL (e.g. https://<YourJamf>.jamfcloud.com)
+	sys.argv[2] -eq Your JAMF API Username
+	sys.argv[3] -eq Your JAMF API Password
