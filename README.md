@@ -1,5 +1,5 @@
 # JAMF-API-Get_Data_From-JAMF_Desplay_in_Excel
- ## This script runs api calls to get information on Policies, Scripts in Policies, Packages in Policies, Scope in policies, Configuration Profiles, and Scopes in Configuration profiles and save the information in a CSV document for working with in Excel or similar.
+	This script runs api calls to get information on Policies, Scripts in Policies, Packages in Policies, Scope in policies, Configuration Profiles, and Scopes in Configuration profiles and save the information in a CSV document for working with in Excel or similar.
 
 
 ##	Fields returned in csv / Excel are as follows below:
