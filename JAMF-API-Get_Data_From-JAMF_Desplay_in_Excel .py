@@ -1355,11 +1355,8 @@ for configurationProfile in configurationProfiles:
 # Get export to csv file
 df = pd.DataFrame(dataToCsv)
 
-if exists('Jamf_Instance_Info.csv'):
-	print('Jamf Instance	 Info file exists.')
-	df.to_csv('Jamf_Instance_Info.csv',index=False, mode='a', header=False)
-else:
-	print('Jamf Instance	 Info file does not exist')
-	df.to_csv('Jamf_Instance_Info.csv', index=False)
+print('Creating Jamf Instance Info file.')
+
+df.to_csv('Jamf_Instance_Info.csv', index=False)
 	
 print("Jamf Instance	 Info file is now Complete")
