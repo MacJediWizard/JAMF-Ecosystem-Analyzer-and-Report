@@ -1,6 +1,7 @@
 # JAMF-API-Get_Data_From-JAMF_Desplay_in_Excel
 	
-### This script runs api calls to get information on Policies, Scripts in Policies, Packages in Policies, Scope in policies, Configuration Profiles, and Scopes in Configuration profiles and save the information in a CSV document for working with in Excel or similar.
+### This script runs api calls to get information on Policies, Scripts in Policies, Packages in Policies, Scope in policies, Configuration Profiles, and Scopes in Configuration profiles and save the information in a CSV document for working with in Excel or similar. 
+		The Script runs on Python 3 and uses the Libraries "Requests" and "Pandas". There is a check built in so as long as you have Python3 installed, the two libraries will be installed automatically with pip3.
 
 
 ##	Fields returned in csv / Excel are as follows below:
@@ -58,8 +59,6 @@
 	Configuration Profile Exclusion Group id
 	Configuration Profile Exclusion Group Name
 	Configuration Profile Exclusion Group is Smart
-
-
 
 
 ## Variables
