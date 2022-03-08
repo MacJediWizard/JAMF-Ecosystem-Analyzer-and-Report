@@ -113,13 +113,29 @@
 ##########################################################################################
 # Imports
 ##########################################################################################
-import requests, sys
+import os, sys, time
+
+
+# For Using the Requests Library with the API
+try:
+	import requests
+except ImportError:
+	os.system('pip3 install requests')
+	time.sleep(3)
+	import requests
+	
 from requests.auth import HTTPBasicAuth
 
-#For CSV processing
-import pandas as pd
-from os.path import exists
 
+#For CSV processing with Pandas Library
+try:
+	import pandas as pd
+except ImportError:
+	os.system('pip3 install pandas')
+	time.sleep(3)
+	import pandas as pd
+
+from os.path import exists
 
 ##########################################################################################
 # JAMF API information
