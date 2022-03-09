@@ -204,8 +204,8 @@ for policy in policies:
 	myPolicyScopeTargetsComputerGroups = getPolicy['policy']['scope']['computer_groups']
 
 	#Scope Element For Limitation
-	myPolicyScopeLimitationsUsers = getPolicy['policy']['scope']['limitations']['users']
-	myPolicyScopeLimitationsUserGroups = getPolicy['policy']['scope']['limitations']['user_groups']
+	#myPolicyScopeLimitationsUsers = getPolicy['policy']['scope']['limitations']['users']
+	#myPolicyScopeLimitationsUserGroups = getPolicy['policy']['scope']['limitations']['user_groups']
 	
 	#Scope Element For Exclusions
 	myPolicyScopeExclusionsComputers = getPolicy['policy']['scope']['exclusions']['computers']
