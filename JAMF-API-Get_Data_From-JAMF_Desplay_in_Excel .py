@@ -6,7 +6,7 @@
 #
 #	Script created By William Grzybowski March 3, 2022
 #
-#	Version 1.0	- Initial Creation of Script.
+#	Version 2.0	- Initial Creation of Script.
 #
 #	This script take User Imput and will call the JAMF API and get all Information 
 #	related to a Policy.
