@@ -1,11 +1,11 @@
 # JAMF-API-Get_Data_From-JAMF_Desplay_in_Excel
 	
-### This script runs api calls to get information on Policies, Scripts in Policies, Packages in Policies, Scope in policies, Configuration Profiles, and Scopes in Configuration profiles and save the information in a CSV document for working with in Excel or similar. 
+### This script runs api calls to get information on Policies, Scripts in Policies, Packages in Policies, Scope in policies, Configuration Profiles, and Scopes in Configuration profiles and save the information in a xlsx document for working with in Excel or similar. 
 		
-### The Script runs on Python 3 and uses the Libraries "Requests" and "Pandas". There is a check built in so as long as you have Python3 installed, the two libraries will be installed automatically with pip3.
+### The Script runs on Python 3 and uses the Libraries "Requests", "Pandas", "openpyxl", and "xlsxwriter". There is a check built in so as long as you have Python3 installed, the other libraries will be installed automatically with pip3.
 
 
-##	Fields returned in csv / Excel are as follows below:
+##	Fields returned in Excel are as follows below:
 
 	Policy Record Type
 
@@ -62,13 +62,6 @@
 	Configuration Profile Exclusion Group is Smart
 
 
-## Variables
-
-This script can take the following Variables in the command path.
-exampleScript.py "JAMF_Instance_URL" "Your_JAMF_API_Username" "Your_JAMF_API_Password"
-
-### Variable Description:
-
-	sys.argv[1] -eq JAMF Instance URL (e.g. https://<YourJamf>.jamfcloud.com)
-	sys.argv[2] -eq Your JAMF API Username
-	sys.argv[3] -eq Your JAMF API Password
+## How to run
+	Have python3 on your device. Run the script. Enter the information at the prompts.
+	Dependancies will be automatically installed. Enjoy!!!

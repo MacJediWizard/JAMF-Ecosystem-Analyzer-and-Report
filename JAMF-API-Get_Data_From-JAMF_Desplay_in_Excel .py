@@ -8,8 +8,9 @@
 #
 #	Version 1.0	- Initial Creation of Script.
 #
-#	This script will call the JAMF API and get all Information related to a Policy.
-#	It looks up all policies and then returns an csv / Excel spreadsheet.
+#	This script take User Imput and will call the JAMF API and get all Information 
+#	related to a Policy.
+#	It looks up all policies and then returns an Excel spreadsheet.
 #
 #	Fields returned in csv / Excel are as follows below:
 #
@@ -70,15 +71,11 @@
 #
 #
 #
+#	The only requirement is that you have Python3 on the device. All other libraries
+#	the script will look for them and download if they are not found.
 #
-#	Variable Label Names
+#	Run from terminal and answer the 3 fields. URL, API Username, API Password.
 #
-#	$1 -eq JAMF Instance URL (e.g. https://<YourJamf>.jamfcloud.com)
-#	$2 -eq Your JAMF API Username
-#	$3 -eq Your JAMF API Password
-#
-#	To test or use you can just send 3 arguments to the script. See example below.
-#	(e.g. JAMF-API-Get_Data_From-JAMF_Desplay_in_Excel.py "$1" "$2" "$3")
 #
 ##########################################################################################
 
