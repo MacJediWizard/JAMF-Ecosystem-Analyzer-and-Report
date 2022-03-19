@@ -6,7 +6,8 @@
 #
 #	Script created By William Grzybowski March 3, 2022
 #
-#	Version 2.0	- Initial Creation of Script.
+#	Version 1.0	- Initial Creation of Script.
+#	Version 2.0 - Adding Computer fields and sheets to report
 #
 #	This script take User Imput and will call the JAMF API and get all Information 
 #	related to a Policy, Configuration Profile, and Computers.
@@ -81,18 +82,55 @@
 ##################################################
 #	Computer Record Type
 ##################################################
+#	if you are usingSmartGroup
+#
+#		Computer SmartGroup ID
+#
+#		Computer SmartGroup Name
+#
+#		Computer Record Type
+#
+#		Computer ID
+#
+#		Computer Name
+#
+#		Computer Serial Number
+#
+#	If you are not usingSmartGroup
+#
+#		Computer Record Type
+#
+#		Computer ID
+#
+#		Computer Name
+#
+#		Computer Serial Number
 #
 #
+#	Computer Make
+#
+#	Computer Model
+#
+#	Computer Model Identifier
+#
+#	Computer OS Name
+#
+#	Computer OS Version
+#
+#	Computer OS Build
 #
 #
+#	Computer FileVault2 User
 #
+#	Computer Local Account Name
 #
+#	Computer Local Account Real Name
 #
+#	Computer Local Account ID
 #
+#	Computer Local Account is Admin
 #
-#
-#
-#
+#	Computer Local Account in LDAP
 #
 #
 ##################################################
@@ -103,6 +141,18 @@
 #	the script will look for them and download if they are not found.
 #
 #	Run from terminal and answer the 3 fields. URL, API Username, API Password.
+#	You can also send command line args to the script
+#	For Example : yourScript.py "URL" "API Username" "API Password"
+#
+#	You also get the option to select the path and filename for your xlsx file.
+#
+#	In the Computers section you have the option of running the report with a
+#	smart group is or on the whole instance.
+#
+#	When looking up local accounts from the computers section, you can do an LDAP
+#	check to see what accounts are in LDAP. Great for when you use a JIM server.
+#	
+#	It wall also look up all JIM servers and let you choose the one you want to use.
 #
 #
 ##########################################################################################
