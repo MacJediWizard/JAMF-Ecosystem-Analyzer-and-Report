@@ -9,14 +9,17 @@
 #	Version 2.0	- Initial Creation of Script.
 #
 #	This script take User Imput and will call the JAMF API and get all Information 
-#	related to a Policy.
-#	It looks up all policies and then returns an Excel spreadsheet.
+#	related to a Policy, Configuration Profile, and Computers.
+#
+#	It looks up all selected Info and then returns an Excel spreadsheet.
 #
 #	Fields returned in csv / Excel are as follows below:
 #
 #
+##################################################
 #	Policy Record Type
-#	
+##################################################
+#
 #	Policy ID
 #	Policy Name
 #	Policy Category ID
@@ -47,6 +50,11 @@
 #	Policy Script Name
 #	Policy Script Category Name
 #	Policy Script Filename
+#
+#
+##################################################
+#	Configuration Profile Record Type
+##################################################
 #	
 #	Configuration Profile ID
 #	Configuration Profile Type
@@ -70,6 +78,26 @@
 #	Configuration Profile Exclusion Group is Smart
 #
 #
+##################################################
+#	Computer Record Type
+##################################################
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+##################################################
+#	Additional Info
+##################################################
 #
 #	The only requirement is that you have Python3 on the device. All other libraries
 #	the script will look for them and download if they are not found.
@@ -110,7 +138,7 @@
 ##########################################################################################
 # Imports
 ##########################################################################################
-import os, sys, time, getpass
+import os, sys, time, getpass, re
 
 from os.path import exists
 
@@ -124,6 +152,9 @@ except ImportError:
 	import requests
 	
 from requests.auth import HTTPBasicAuth
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+from requests.exceptions import HTTPError
 
 
 #For CSV processing with Pandas Library
@@ -156,13 +187,67 @@ except ImportError:
 ##########################################################################################
 # Variables
 ##########################################################################################
-#Set Variable for the Data	
+#Set Variable for the Data
+dataToCsvComputers = []
 dataToCsvPolicy = []
 dataToCsvConfigurationProfile = []
+JIMServerList = []
 
 
 #To check User login in JAMF API
 get_JAMF_URL_User_Test = "/JSSResource/accounts/username/"
+
+
+# For default Local User Accounts you do not want in the List
+filterDefaultUserAccountsList = ['daemon', 'jamfmgmt', 'nobody', 'root']
+
+
+#CLA for terminal
+APILoginURL = sys.argv[1]
+APIUsername = sys.argv[2]
+APIPassword = sys.argv[3]
+
+
+##########################################################################################
+# Jamf API Setup Information
+##########################################################################################
+# requests headers
+headers = {
+	'Accept': 'application/json',
+	'Content-Type': 'application/json'
+}
+
+
+DEFAULT_TIMEOUT = 5 # seconds
+
+class TimeoutHTTPAdapter(HTTPAdapter):
+	def __init__(self, *args, **kwargs):
+		self.timeout = DEFAULT_TIMEOUT
+		if "timeout" in kwargs:
+			self.timeout = kwargs["timeout"]
+			del kwargs["timeout"]
+		super().__init__(*args, **kwargs)
+		
+	def send(self, request, **kwargs):
+		timeout = kwargs.get("timeout")
+		if timeout is None:
+			kwargs["timeout"] = self.timeout
+		return super().send(request, **kwargs)
+	
+	
+# Retry for requests
+retry_strategy = Retry(
+	total=10,
+	backoff_factor=1,
+	status_forcelist=[204, 413, 429, 500, 502, 503, 504],
+	allowed_methods=["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE", "POST", "HTTP"]
+)
+
+adapter = TimeoutHTTPAdapter(max_retries=retry_strategy)
+
+http = requests.Session()
+http.mount("https://", adapter)
+http.mount("http://", adapter)
 
 
 ##########################################################################################
@@ -174,11 +259,11 @@ def getYesOrNoInput(prompt):
 		try:
 			value = input(prompt)
 		except ValueError:
-			print("Sorry, I didn't understand that.")
+			print("\nSorry, I didn't understand that.")
 			continue
 		
 		if value.lower() != 'yes' and value.lower() != 'no':
-			print("Sorry, your response must be yes or no only.")
+			print("\nSorry, your response must be yes or no only.")
 			continue
 		else:
 			break
@@ -186,6 +271,11 @@ def getYesOrNoInput(prompt):
 
 
 #Merge Dictionaries
+def MergeComputersInfo(dict1, dict2, dict3, dict4):
+	result = dict1 | dict2 | dict3 | dict4
+	return result
+
+
 def MergePolicyInfo(dict1, dict2, dict3, dict4, dict5, dict6):
 	result = dict1 | dict2 | dict3 | dict4 | dict5 | dict6
 	return result
@@ -199,130 +289,414 @@ def MergeConfigProfileInfo(dict1, dict2, dict3):
 #Check User Input for URL, Username, and Password
 def JAMFInfoCheck(url, username, password):
 	try:
-		response = requests.request("GET", url, headers={"accept": "application/json"}, auth = HTTPBasicAuth(username, password))
+		response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
 		if response.status_code == 200:
-			return print(f"User Input is OK, we can connect to JAMF API, Moving on.\n\n")
+			return print(f"\nUser Input is OK, we can connect to JAMF API, Moving on.\n\n")
 		else:
-			raise SystemExit(f"User Input is NOT OK, we cannot connect to JAMF API and now will EXIT! status_code: {response.status_code}\n\n")
+			raise SystemExit(f"\nUser Input is NOT OK, we cannot connect to JAMF API and now will EXIT! status_code: {response.status_code}\n\n")
 			
 	#Exception
 	except requests.exceptions.RequestException as e:
 		# print URL with Erors
-		raise SystemExit(f"User Input is NOT OK, we cannot connect to JAMF API and now will EXIT! \nErr: {e}")
+		raise SystemExit(f"\nUser Input is NOT OK, we cannot connect to JAMF API and now will EXIT! \nErr: {e}")
 
+
+# let user choose Options from list
+def let_user_pick(label, options):
+	print(label+"\n")
+	
+	for index, element in enumerate(options):
+		print("{}) {}".format(index + 1, element))
+		
+	while True:
+		try:
+			i = input("\nEnter number: ")
+			
+			try:
+				if 0 < int(i) <= len(options):
+					return int(i) - 1
+					break
+			
+				else:
+					print("\nI didn't get a number in the list. Please try again with a number in the list.")
+					continue
+			
+			except ValueError:
+				print ("\nYou fail at typing numbers. Please try again with a NUMBER in the list")
+				continue
+			
+			return None
+		
+		except:
+			print ("\nOops, Something went wrong.")
+			
+		return None
+	
+	return None
+	
+# Check Input for Number only
+def checkInputForNumber(label):
+	
+	while True:
+		num = input(label+" ")
+		try:
+			val = int(num)
+			
+			print("\nSetting Smart Group ID to: "+num)
+			smartGroupID = num
+			break;
+		
+		except ValueError:
+			
+			try:
+				float(num)
+				print("Input is an float number.")
+				print("Input number is: ", val)
+				break;
+			
+			except ValueError:
+				print("\nThis is not a number. Please enter a valid number\n")
+	
+	return num
+
+
+def checkFilePath(prompt):
+	while True:
+		try:
+			value = input(prompt)
+		except ValueError:
+			print("\nSorry, I didn't understand that.")
+			continue
+		
+		pathExist = os.path.exists(value)
+		
+		if pathExist != True :
+			print("\nFile does not Path Exists.")
+			continue
+		else:
+			break
+	return value  
+
+
+def checkFileName(prompt):
+	while True:
+		try:
+			value = input(prompt)
+		except ValueError:
+			print("\nSorry, I didn't understand that.")
+			continue
+		
+		if not value.endswith('.xlsx'):
+			print("\nFilename has the wrong extension for Excel.")
+			continue
+		else:
+			break
+	return value   
+
+
+def confirmExcelFileName(prompt):
+	while True:
+		try:
+			value = input(prompt)
+		except ValueError:
+			print("\nSorry, I didn't understand that.")
+			continue
+		
+		if value.lower() != 'yes' and value.lower() != 'no':
+			print("\nSorry, your response must be yes or no only.")
+			continue
+		elif value.lower() == 'no' :
+			raise SystemExit(f"\nUser DID NOT confirm the Excel File Name and now will EXIT!")
+			
+		elif value.lower() == 'yes':
+			break
+	return value
 
 
 ##########################################################################################
 # Get User Input
 ##########################################################################################
-#Get User input
-get_JAMF_URL = input("Enter your JAMF Instance URL: ")
-get_JAMF_API_Username = input("Enter your JAMF Instance API Username: ")
-get_JAMF_API_Password = getpass.getpass("Enter your JAMF Instance API Password: ")
+#Get User input if needed or use command line arguments
+
+print("******************** JAMF API Credentials ********************\n")
+
+if APILoginURL == "" :
+	
+	get_JAMF_URL = input("Enter your JAMF Instance URL (https://yourjamf.jamfcloud.com): ")
+	
+else:
+	
+	print("JAMF URL supplied in command line arguments.")
+	get_JAMF_URL = sys.argv[1]
+
+	
+if APIUsername == "" :
+	
+	get_JAMF_API_Username = input("Enter your JAMF Instance API Username: ")
+	
+else:
+	
+	print("JAMF API Username supplied in command line arguments.")
+	get_JAMF_API_Username = sys.argv[2]
+
+
+if APIPassword == "" :
+	
+	get_JAMF_API_Password = getpass.getpass("Enter your JAMF Instance API Password: ")
+	
+else:
+	
+	print("JAMF API Username supplied in command line arguments.")
+	get_JAMF_API_Password = sys.argv[3]
+
+
 
 #Check User Input for URL, Username, and Password
 JAMFInfoCheck((get_JAMF_URL+get_JAMF_URL_User_Test+get_JAMF_API_Username), get_JAMF_API_Username, get_JAMF_API_Password)
 
 
-get_JAMF_Policy_Info = getYesOrNoInput("Do you want to include JAMF Policy Info in Report? (yes or no): ")
-get_JAMF_Configuration_Profile_Info = getYesOrNoInput("Do you want to include JAMF Configuration Profile Info in Report? (yes or no): ")
+# Get Main Groups Section.
+print("\n******************** JAMF API File Info ********************\n")
+get_JAMF_FilePath_Info = checkFilePath("Please enter the full path where you want to save the file (ex. \"/Users/Shared/\") : ")
+get_JAMF_FileName_Info = checkFileName("Please enter the name you want to save the excel file as. (ex. \"myExcelFile.xlsx\") : ")
+
+getDesplayExcelReportFile = get_JAMF_FilePath_Info+get_JAMF_FileName_Info
+
+desplayExcelReportFile = f"{getDesplayExcelReportFile}"
+
+confirmExcelReportFile = confirmExcelFileName("Please confirm that the filename, " + desplayExcelReportFile + " is correct. (yes or no)")
+
+if confirmExcelReportFile == 'yes':
+	excelReportFile = desplayExcelReportFile
+	print("\nSetting filename for JAMF Report to: "+excelReportFile+"\n")
+
+
+# Get Main Groups Section.
+print("\n\n******************** JAMF API Report Excel Sheets ********************\n")
+get_JAMF_Computers_Info = getYesOrNoInput("Do you want to include JAMF Computer Info Section in Report? (yes or no): ")
+get_JAMF_Policy_Info = getYesOrNoInput("Do you want to include JAMF Policy Info Section in Report? (yes or no): ")
+get_JAMF_Configuration_Profile_Info = getYesOrNoInput("Do you want to include JAMF Configuration Profile Info Section in Report? (yes or no): ")
 
 
 ##########################################################################################
-# JAMF API information
+# JAMF API Variables
 ##########################################################################################
 JAMF_url = get_JAMF_URL
 username = get_JAMF_API_Username
 password = get_JAMF_API_Password
 
 
-headers = {
-	'accept': 'application/json',
-}
-
-
 ##########################################################################################
 # Core Script
 ##########################################################################################
+##################################################
+# Get Jamf Computer Info
+##################################################
+if get_JAMF_Computers_Info == ("yes"):
+	
+	#Get Computer Info
+	print("\nIncluding JAMF Computer Info.\n\n")
+	includeComputerInfo = "yes"
+	
+	
+	#Get Smart Group ID if needed
+	print("\n******************** JAMF API Computer Info Smart Group Section. ********************\n")
+	get_JAMF_Computers_Info_SmartGroup = getYesOrNoInput("Do you want to use a JAMF Smart Group for the Computer Report Info? (yes or no): ")
+	
+	if get_JAMF_Computers_Info_SmartGroup == 'yes':
+		
+		print("\nUsing JAMF Smart Group for the Computer Report.\n\n")
+		smartGroupIDLabel = "Enter your JAMF SmartGroup ID Number: "
+		get_JAMF_SmartGroup_ID = checkInputForNumber(smartGroupIDLabel)
+		print("\n")
+		JAMF_SmartGroup_ID = get_JAMF_SmartGroup_ID
+		usingSmartGroup = "yes"
+		
+		
+	elif get_JAMF_Computers_Info_SmartGroup == ("no"):
+		
+		print("\nNot using JAMF Smart Group for the Computer Report.\n\n")
+		usingSmartGroup = "no"
+	
+	
+	#Get Policy Self Service Elements
+	print("\n******************** JAMF API Computer Info Hardware Section. ********************\n")
+	get_JAMF_Computers_Info_Hardware = getYesOrNoInput("Do you want to include JAMF Computer Hardware Info in Report? (yes or no): ")
+	if get_JAMF_Computers_Info_Hardware == ("yes"):
+		
+		print("\nIncluding Computer Hardware Data.\n\n")		
+		includeHardwareInfo = "yes"
+		
+	elif get_JAMF_Computers_Info_Hardware == ("no"):
+		
+		print("\nNot Including Computer Hardware Data.\n\n")		
+		includeHardwareInfo = "no"
+		
+		
+	#Get FileVault2 Users
+	print("\n******************** JAMF API Computer Info FileVault2 Section. ********************\n")
+	get_JAMF_Computers_Info_FileVault2_Users = getYesOrNoInput("Do you want to include JAMF Computer Hardware FileVault Users Info in Report? (yes or no): ")
+	if get_JAMF_Computers_Info_FileVault2_Users == ("yes"):
+		
+		print("\nIncluding FileVault2 Info Data.\n\n")		
+		includeFileVault2Info = "yes"
+		
+	elif get_JAMF_Computers_Info_FileVault2_Users == ("no"):
+		
+		print("\nNot including FileVault2 Info Data.\n\n")
+		includeFileVault2Info = "no"
+
+	
+	#Get Local Users Accounts
+	print("\n******************** JAMF API Computer Info Local Account Section. ********************\n")
+	get_JAMF_Computers_Info_Local_Account = getYesOrNoInput("Do you want to include JAMF Computer Hardware Local Account Info in Report? (yes or no): ")
+	if get_JAMF_Computers_Info_Local_Account == ("yes"):
+		
+		print("\nIncluding Local Account Info Data.\n\n")
+		includeLocalAccountInfo = "yes"
+		
+		print("\n******************** JAMF API Computer Info Local Account LDAP Section. ********************\n")
+		get_JAMF_Computers_Info_Local_Account_LDAP = getYesOrNoInput("Do you want to include JAMF Computer Hardware Local Accounts LDAP Verification in Report? (yes or no): ")
+		
+		if get_JAMF_Computers_Info_Local_Account_LDAP == ("yes"):
+			
+			print("\nIncluding Local Account Info LDAP Verification Data.\n\n")
+			includeLocalAccountInfoLDAP = "yes"
+			
+			# Lookup JIM Server Name
+			url = JAMF_url + "/JSSResource/ldapservers"
+			
+			try:
+				response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+			
+				response.raise_for_status()
+
+				resp = response.json()
+				
+			except HTTPError as http_err:
+				print(f'HTTP error occurred: {http_err}')
+			except Exception as err:
+				print(f'Other error occurred: {err}')	
+			
+			#For Testing
+			#print(resp)
+			
+			JIMServerRecords = resp['ldap_servers']
+			JIMServerRecords.sort(key=lambda item: item.get('id'), reverse=False)
+			
+			
+			for JIMServer in JIMServerRecords:
+				
+				JIMServerRecordsName = JIMServer['name']
+				JIMServerList.append(JIMServerRecordsName)
+				
+			JIMServerlabel = "Please choose the JIM Server you would like to use:"
+			
+			JimServerChoice = let_user_pick(JIMServerlabel, JIMServerList)
+			
+			JIMServerNameForURL = (JIMServerList[JimServerChoice])
+			
+			JIMServerLDAPLookupURL = "/JSSResource/ldapservers/name/" + JIMServerNameForURL
+			
+			
+		elif get_JAMF_Computers_Info_Local_Account_LDAP == ("no"):
+			
+			print("\nIncluding Local Account Info LDAP Verification Data.\n\n")
+			includeLocalAccountInfoLDAP = "no"
+			
+		
+	elif get_JAMF_Computers_Info_Local_Account == ("no"):
+		
+		print("\nNot including Local Account Info Data.\n\n")
+		includeLocalAccountInfo = "no"
+
+
+##################################################
 # Get Jamf Policy Info
+##################################################
 if get_JAMF_Policy_Info == ("yes"):
 	
 	#Get Policy Info
-	print("Including JAMF Policy Info.\n\n")
+	print("\nIncluding JAMF Policy Info.\n\n")
 	includePolicyInfo = "yes"
 	
 	
 	#Get Policy Self Service Elements
+	print("\n******************** JAMF API Policy Self Service Section. ********************\n")
 	get_JAMF_Policy_Info_SelfService = getYesOrNoInput("Do you want to include JAMF Policy Self Service Info in Report? (yes or no): ")
 	if get_JAMF_Policy_Info_SelfService == ("yes"):
 		
-		print("Including Self Service Data.\n\n")
+		print("\nIncluding Self Service Data.\n\n")
 		
 		includeSelfServiceInfo = "yes"
 		
 	elif get_JAMF_Policy_Info_SelfService == ("no"):
 		
-		print("Not Including Self Service Data.\n\n")
+		print("\nNot Including Self Service Data.\n\n")
 		
 		includeSelfServiceInfo = "no"
 		
 		
 	#Get Policy Targets
-	get_JAMF_Policy_Info_Targets = getYesOrNoInput("Do you want to include JAMF Policy Target Info in Report? (yes or no): ")
+	print("\n******************** JAMF API Policy Targets Section. ********************\n")
+	get_JAMF_Policy_Info_Targets = getYesOrNoInput("Do you want to include JAMF Policy Targets Info in Report? (yes or no): ")
 	if get_JAMF_Policy_Info_Targets == ("yes"):
 		
-		print("Including Target Data.\n\n")
+		print("\nIncluding Target Data.\n\n")
 		
 		includeTargetsInfo = "yes"
 		
 	elif get_JAMF_Policy_Info_Targets == ("no"):
 		
-		print("Not Including Target Data.\n\n")
+		print("\nNot Including Target Data.\n\n")
 		
 		includeTargetsInfo = "no"
 		
 		
 	#Get Policy Exclusions
+	print("\n******************** JAMF API Policy Exclusions Section. ********************\n")
 	get_JAMF_Policy_Info_Exclusions = getYesOrNoInput("Do you want to include JAMF Policy Exclusions Info in Report? (yes or no): ")
 	if get_JAMF_Policy_Info_Exclusions == ("yes"):
 		
-		print("Including Exclusions Data.\n\n")
+		print("\nIncluding Exclusions Data.\n\n")
 		
 		includeExclusionsInfo = "yes"
 		
 	elif get_JAMF_Policy_Info_Exclusions == ("no"):
 		
-		print("Not Including Exclusions Data.\n\n")
+		print("\nNot Including Exclusions Data.\n\n")
 		
 		includeExclusionsInfo = "no"
 		
 		
 	#Get Policy Package Elements
+	print("\n******************** JAMF API Policy Packages Section. ********************\n")
 	get_JAMF_Policy_Info_Packages = getYesOrNoInput("Do you want to include JAMF Policy Packages Info in Report? (yes or no): ")
 	if get_JAMF_Policy_Info_Packages == ("yes"):
 		
-		print("Including Package Data.\n\n")
+		print("\nIncluding Package Data.\n\n")
 		
 		includePackagesInfo = "yes"
 		
 	elif get_JAMF_Policy_Info_Packages == ("no"):
 		
-		print("Not Including Package Data.\n\n")
+		print("\nNot Including Package Data.\n\n")
 		
 		includePackagesInfo = "no"
 		
 		
 	#Get Policy Script Elements
+	print("\n******************** JAMF API Policy Scripts Section. ********************\n")
 	get_JAMF_Policy_Info_Scripts = getYesOrNoInput("Do you want to include JAMF Policy Scripts Info in Report? (yes or no): ")
 	if get_JAMF_Policy_Info_Scripts == ("yes"):
 		
-		print("Including Scripts Data.\n\n")
+		print("\nIncluding Scripts Data.\n\n")
 		
 		includeScriptsInfo = "yes"
 		
 	elif get_JAMF_Policy_Info_Scripts == ("no"):
 		
-		print("Not Including Scripts Data.\n\n")
+		print("\nNot Including Scripts Data.\n\n")
 		
 		includeScriptsInfo = "no"
 		
@@ -331,8 +705,10 @@ elif get_JAMF_Policy_Info == ("no"):
 	
 	includePolicyInfo = "no"
 	
-	
+
+##################################################
 # Get Configuration Profile Info
+##################################################
 if get_JAMF_Configuration_Profile_Info == ("yes"):
 	
 	#Get Configuration Profile Info
@@ -341,31 +717,33 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 	includeConfigurationProfileInfo = "yes"
 	
 	#Get Policy Targets
-	get_JAMF_Configuration_Profile_Info_Targets = getYesOrNoInput("Do you want to include JAMF Configuration Profile Target Info in Report? (yes or no): ")
+	print("\n******************** JAMF API Configuration Profile Targets Section. ********************\n")
+	get_JAMF_Configuration_Profile_Info_Targets = getYesOrNoInput("Do you want to include JAMF Configuration Profile Targets Info in Report? (yes or no): ")
 	if get_JAMF_Configuration_Profile_Info_Targets == ("yes"):
 		
-		print("Including Target Data.\n\n")
+		print("\nIncluding Target Data.\n\n")
 		
 		includeConfigurationProfileTargetsInfo = "yes"
 		
 	elif get_JAMF_Configuration_Profile_Info_Targets == ("no"):
 		
-		print("Not Including Target Data.\n\n")
+		print("\nNot Including Target Data.\n\n")
 		
 		includeConfigurationProfileTargetsInfo = "no"
 		
 		
 	#Get Policy Exclusions
+	print("\n******************** JAMF API Configuration Profile Exclusions Section. ********************\n")
 	get_JAMF_Configuration_Profile_Info_Exclusions = getYesOrNoInput("Do you want to include JAMF Configuration Profile Exclusions Info in Report? (yes or no): ")
 	if get_JAMF_Configuration_Profile_Info_Exclusions == ("yes"):
 		
-		print("Including Exclusions Data.\n\n")
+		print("\nIncluding Exclusions Data.\n\n")
 		
 		includeConfigurationProfileExclusionsInfo = "yes"
 		
 	elif get_JAMF_Configuration_Profile_Info_Exclusions == ("no"):
 		
-		print("Not Including Exclusions Data.\n\n")
+		print("\nNot Including Exclusions Data.\n\n")
 		
 		includeConfigurationProfileExclusionsInfo = "no"
 		
@@ -374,13 +752,74 @@ elif get_JAMF_Configuration_Profile_Info == ("no"):
 	
 	includeConfigurationProfileInfo = "no"
 	
-	
+
+##################################################
+# Set Variables for dict
+##################################################
 #Check Options set and desplay message to user
-if get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes':
+if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes':
 	
-	print("Running Request Report Now.\n\n")
+	print("\n******************** Running Requested Report Now. ********************\n\n")
 	
+
+	##################################################
+	# Set Variables for Dict for Computers Info
+	##################################################
+	if usingSmartGroup == 'yes':
+		
+		dataToCVS_JAMF_Computers_Info = "{'Computer SmartGroup ID':'',\
+		\
+		'Computer SmartGroup Name':'',\
+		\
+		'Type':'',\
+		\
+		'Computer ID':'',\
+		\
+		'Computer Name':'',\
+		\
+		'Computer Serial Number':''}"
+		
+	elif usingSmartGroup == 'no':
+		
+		dataToCVS_JAMF_Computers_Info = "{'Type':'',\
+		\
+		'Computer ID':'',\
+		\
+		'Computer Name':'',\
+		\
+		'Computer Serial Number':''}"
+		
+	
+	dataToCVS_JAMF_Computers_Hardware_Info = "{'Computer Make':'',\
+	\
+	'Computer Model':'',\
+	\
+	'Computer Model Identifier':'',\
+	\
+	'Computer OS Name':'',\
+	\
+	'Computer OS Version':'',\
+	\
+	'Computer OS Build':''}"	
+	
+	
+	dataToCVS_JAMF_Computers_FileVault2_Info = "{'Computer FileVault2 User':''}"
+	
+	
+	dataToCVS_JAMF_Computers_Local_Account_Info = "{'Computer Local Account Name':'',\
+	\
+	'Computer Local Account Real Name':'',\
+	\
+	'Computer Local Account ID':'',\
+	\
+	'Computer Local Account is Admin ':'',\
+	\
+	'Computer Local Account in LDAP ':''}"	
+	
+	
+	##################################################
 	# Set Variables for Dict for Policy Info
+	##################################################
 	dataToCVS_JAMF_Policy_Info = "{'Type':'',\
 	\
 	'Policy ID':'',\
@@ -472,8 +911,65 @@ if get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes'
 	\
 	'Configuration Profile Exclusion Group is Smart':''}"
 	
+
+	##################################################
+	# Set Variables for Dict for Computers Info to empty
+	##################################################
+	if usingSmartGroup == 'yes':
+		
+		dataToCVS_JAMF_Computers_Info_Empty = "{'Computer SmartGroup ID':'',\
+		\
+		'Computer SmartGroup Name':'',\
+		\
+		'Type':'',\
+		\
+		'Computer ID':'',\
+		\
+		'Computer Name':'',\
+		\
+		'Computer Serial Number':''}"
+		
+	elif usingSmartGroup == 'no':
+		
+		dataToCVS_JAMF_Computers_Info_Empty = "{'Type':'',\
+		\
+		'Computer ID':'',\
+		\
+		'Computer Name':'',\
+		\
+		'Computer Serial Number':''}"
+		
+
+	dataToCVS_JAMF_Computers_Hardware_Info_Empty = "{'Computer Make':'',\
+	\
+	'Computer Model':'',\
+	\
+	'Computer Model Identifier':'',\
+	\
+	'Computer OS Name':'',\
+	\
+	'Computer OS Version':'',\
+	\
+	'Computer OS Build':''}"	
 	
+	
+	dataToCVS_JAMF_Computers_FileVault2_Info_Empty = "{'Computer FileVault2 User':''}"
+	
+	
+	dataToCVS_JAMF_Computers_Local_Account_Info_Empty = "{'Computer Local Account Name':'',\
+	\
+	'Computer Local Account Real Name':'',\
+	\
+	'Computer Local Account ID':'',\
+	\
+	'Computer Local Account is Admin ':'',\
+	\
+	'Computer Local Account in LDAP ':''}"
+	
+	
+	##################################################
 	# Set Variables for Dict for Policy Info Empty
+	##################################################
 	dataToCVS_JAMF_Policy_Info_Empty = "{'Type':'',\
 	\
 	'Policy ID':'',\
@@ -532,7 +1028,9 @@ if get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes'
 	'Policy Script Filename':''}"
 	
 	
-	# Set Variables for Dict for Configuration Profile Info
+	##################################################
+	# Set Variables for Dict for Configuration Profile Info to empty
+	##################################################
 	dataToCVS_JAMF_Configuration_Profile_Info_Empty = "{'Configuration Profile ID':'',\
 	\
 	'Configuration Profile Type':'',\
@@ -566,32 +1064,98 @@ if get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes'
 	'Configuration Profile Exclusion Group is Smart':''}"
 	
 	
+	##################################################
+	# Take Variables and make Dict
+	##################################################
+	# Computers Info
+	JAMF_Computers_Info = eval(dataToCVS_JAMF_Computers_Info)
+	JAMF_Computers_Hardware_Info = eval(dataToCVS_JAMF_Computers_Hardware_Info)
+	JAMF_Computers_FileVault2_Info = eval(dataToCVS_JAMF_Computers_FileVault2_Info)
+	JAMF_Computers_Local_Account_Info = eval(dataToCVS_JAMF_Computers_Local_Account_Info)
 	
-	# Take Variables and make them a Empty Dict
+	# Policy Info
 	JAMF_Policy_Info = eval(dataToCVS_JAMF_Policy_Info)
 	JAMF_Policy_SelfService_Info = eval(dataToCVS_JAMF_Policy_SelfService_Info)
 	JAMF_Policy_Target_Info = eval(dataToCVS_JAMF_Policy_Target_Info)
 	JAMF_Policy_Exclusion_Info = eval(dataToCVS_JAMF_Policy_Exclusion_Info)
 	JAMF_Policy_Packages_Info = eval(dataToCVS_JAMF_Policy_Packages_Info)
 	JAMF_Policy_Scripts_Info = eval(dataToCVS_JAMF_Policy_Scripts_Info)
+	
+	# Configuration Profile Info
 	JAMF_Configuration_Profile_Info = eval(dataToCVS_JAMF_Configuration_Profile_Info)
 	JAMF_Configuration_Profile_Target_Info = eval(dataToCVS_JAMF_Configuration_Profile_Target_Info)
 	JAMF_Configuration_Profile_Exclusion_Info = eval(dataToCVS_JAMF_Configuration_Profile_Exclusion_Info)
 	
 	
+	##################################################
 	# Take Variables and make them a Empty Dict
+	##################################################
+	# Computers Info
+	JAMF_Computers_Info_Empty = eval(dataToCVS_JAMF_Computers_Info_Empty)
+	JAMF_Computers_Hardware_Info_Empty = eval(dataToCVS_JAMF_Computers_Hardware_Info_Empty)
+	JAMF_Computers_FileVault2_Info_Empty = eval(dataToCVS_JAMF_Computers_FileVault2_Info_Empty)
+	JAMF_Computers_Local_Account_Info_Empty = eval(dataToCVS_JAMF_Computers_Local_Account_Info_Empty)
+	
+	# Policy Info
 	JAMF_Policy_Info_Empty = eval(dataToCVS_JAMF_Policy_Info_Empty)
 	JAMF_Policy_SelfService_Info_Empty = eval(dataToCVS_JAMF_Policy_SelfService_Info_Empty)
 	JAMF_Policy_Target_Info_Empty = eval(dataToCVS_JAMF_Policy_Target_Info_Empty)
 	JAMF_Policy_Exclusion_Info_Empty = eval(dataToCVS_JAMF_Policy_Exclusion_Info_Empty)
 	JAMF_Policy_Packages_Info_Empty = eval(dataToCVS_JAMF_Policy_Packages_Info_Empty)
 	JAMF_Policy_Scripts_Info_Empty = eval(dataToCVS_JAMF_Policy_Scripts_Info_Empty)
+	
+	# Configuration Profile Info
 	JAMF_Configuration_Profile_Info_Empty = eval(dataToCVS_JAMF_Configuration_Profile_Info_Empty)
 	JAMF_Configuration_Profile_Target_Info_Empty = eval(dataToCVS_JAMF_Configuration_Profile_Target_Info_Empty)
 	JAMF_Configuration_Profile_Exclusion_Info_Empty = eval(dataToCVS_JAMF_Configuration_Profile_Exclusion_Info_Empty)
 	
 	
+	##################################################
 	# Build the dataToCsvPolicy
+	##################################################
+	# Computer Fields
+	if get_JAMF_Computers_Info == "yes":
+		
+		if includeComputerInfo == "yes":
+			
+			computerColumns = JAMF_Computers_Info
+			
+			
+		if includeHardwareInfo == "yes":
+			
+			hardwareColumns = JAMF_Computers_Hardware_Info
+			
+		elif includeHardwareInfo == "no":
+			
+			hardwareColumns = JAMF_Computers_Hardware_Info_Empty
+			
+		
+		if includeFileVault2Info == "yes":
+			
+			FileVault2Columns = JAMF_Computers_FileVault2_Info
+			
+		elif includeFileVault2Info == "no":
+			
+			FileVault2Columns = JAMF_Computers_FileVault2_Info_Empty
+			
+		
+		if includeLocalAccountInfo == "yes":
+			
+			LocalAccountColumns = JAMF_Computers_Local_Account_Info
+			
+		elif includeLocalAccountInfo == "no":
+			
+			LocalAccountColumns = JAMF_Computers_Local_Account_Info_Empty
+			
+	elif get_JAMF_Computers_Info == "no":
+		
+		computerColumns = JAMF_Computers_Info_Empty
+		hardwareColumns = JAMF_Computers_Hardware_Info_Empty
+		FileVault2Columns = JAMF_Computers_FileVault2_Info_Empty
+		LocalAccountColumns = JAMF_Computers_Local_Account_Info_Empty
+						
+	
+	# Policy Fields
 	if get_JAMF_Policy_Info == "yes":
 		
 		if includePolicyInfo == "yes":
@@ -652,7 +1216,8 @@ if get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes'
 		packageColumns = JAMF_Policy_Packages_Info_Empty
 		scriptsColumns = JAMF_Policy_Scripts_Info_Empty
 		
-		
+	
+	# Configuration Profile Fields
 	if get_JAMF_Configuration_Profile_Info == "yes":
 		
 		if includeConfigurationProfileInfo == "yes":
@@ -689,13 +1254,321 @@ if get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes'
 		configProfileExclusionsColumns = JAMF_Configuration_Profile_Exclusion_Info_Empty
 		
 
+##########################################################################################
+# Process Requested Info for Policies
+##########################################################################################			
+if get_JAMF_Computers_Info == ("yes"):
+	
+	##########################################################################################
+	# Process Computers information for csv / Excel
+	##########################################################################################
+	# Set up url for getting a list of all Computers from JAMF API
+	if usingSmartGroup == 'yes':
+		
+		url = JAMF_url + "/JSSResource/computergroups/id/" + JAMF_SmartGroup_ID
+		
+	elif usingSmartGroup == 'no':
+		
+		url = JAMF_url + "/JSSResource/computers"
+	
+	try:
+		response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+		
+		response.raise_for_status()
+		
+		resp = response.json()
+		
+	except HTTPError as http_err:
+		print(f'HTTP error occurred: {http_err}')
+	except Exception as err:
+		print(f'Other error occurred: {err}')
+	
+	# For Testing
+	#print(response.json())
+	
+	if usingSmartGroup == 'yes':
+		
+		computerRecords = resp['computer_group']['computers']
+		computerRecords.sort(key=lambda item: item.get('id'), reverse=False)
+		
+		smartGroupRecords = resp['computer_group']
+		smartGroupRecordName = smartGroupRecords['name']
+		
+		#Set Variables if Data Available
+		if len(str(smartGroupRecords['id'])) == 0:
+			smartGroupRecordID = ''
+		else:
+			smartGroupRecordID = int(smartGroupRecords['id'])
+		
+	elif usingSmartGroup == 'no':
+		
+		computerRecords = resp['computers']
+		computerRecords.sort(key=lambda item: item.get('id'), reverse=False)
+	
+	
+	# Process Computers List and get information linked to Computers
+	for computerRecord in computerRecords:
+		
+		# Get configurationProfile ID to do JAMF API lookup
+		computerRecordID = str(computerRecord['id']) 
+		
+		#For Testing
+		#print(computerRecordID)
+		
+		# Set up url for getting information from each configurationProfile ID from JAMF API
+		url = JAMF_url + "/JSSResource/computers/id/" + computerRecordID
+		
+		try:
+			response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+			
+			response.raise_for_status()
+			
+			computerRecordProfile = response.json()
+			
+		except HTTPError as http_err:
+			print(f'HTTP error occurred: {http_err}')
+		except Exception as err:
+			print(f'Other error occurred: {err}')
+			
+		
+		# For Testing
+		#print(computerRecordProfile)
+		
+		#General Element for ID and Catagory
+		mycomputerRecordGeneral = computerRecordProfile['computer']['general']
+		mycomputerRecordHardware = computerRecordProfile['computer']['hardware']
+		mycomputerRecordHardwareFileVault2Users = computerRecordProfile['computer']['hardware']['filevault2_users']
+		mycomputerRecordHardwareLocalAccounts = computerRecordProfile['computer']['groups_accounts']['local_accounts']
+		
+		
+		##########################################################################################
+		# Process ConfigurationProfile information for csv / Excel
+		##########################################################################################
+		# Individual Computers Info for each record
+		getMycomputerRecordGeneralID = (str(mycomputerRecordGeneral['id']) + " - " + mycomputerRecordGeneral['name'])
+		
+		# Get info for Policies
+		print("Working on Computer ID: " + getMycomputerRecordGeneralID)
+		
+		#Set Variables if Data Available
+		if len(str(mycomputerRecordGeneral['id'])) == 0:
+			mycomputerRecordGeneralID = ''
+		else:
+			mycomputerRecordGeneralID = int(mycomputerRecordGeneral['id'])
+			
+	
+		# Set Variables for Dict for Computers Info
+		if usingSmartGroup == 'yes':
+			
+			appendDataToCVS_JAMF_Computers_Info = "{'Computer SmartGroup ID':smartGroupRecordID,\
+			\
+			'Computer SmartGroup Name':smartGroupRecordName,\
+			\
+			'Type':'Computer Info',\
+			\
+			'Computer ID':mycomputerRecordGeneralID,\
+			\
+			'Computer Name':mycomputerRecordGeneral['name'],\
+			\
+			'Computer Serial Number':str(mycomputerRecordGeneral['serial_number'])}"
+			
+		elif usingSmartGroup == 'no':
+			
+			appendDataToCVS_JAMF_Computers_Info = "{'Type':'Computer Info',\
+			\
+			'Computer ID':mycomputerRecordGeneralID,\
+			\
+			'Computer Name':mycomputerRecordGeneral['name'],\
+			\
+			'Computer Serial Number':str(mycomputerRecordGeneral['serial_number'])}"
+			
+			
+		appendJAMF_Computers_Info = eval(appendDataToCVS_JAMF_Computers_Info)
+		appendComputerColumns = appendJAMF_Computers_Info
+		
+		#Set Columns	
+		Combined = MergeComputersInfo(appendComputerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns)
+		
+		#Set CSV File
+		dataToCsvComputers.append(Combined)	
+		
+		
+		if get_JAMF_Computers_Info_Hardware == ("yes"):
+			##########################################################################################		
+			# Get info for Hardware	
+			##########################################################################################
+			formatMyComputerRecordHardwareOSBuild = f"\"{mycomputerRecordHardware['os_build']}\""
+			
+			appendDataToCVS_JAMF_Computers_Hardware_Info = "{'Type':'Computer Hardware Info',\
+			\
+			'Computer ID':mycomputerRecordGeneralID,\
+			\
+			'Computer Name':mycomputerRecordGeneral['name'],\
+			\
+			'Computer Make':mycomputerRecordHardware['make'],\
+			\
+			'Computer Model':mycomputerRecordHardware['model'],\
+			\
+			'Computer Model Identifier':mycomputerRecordHardware['model_identifier'],\
+			\
+			'Computer OS Name':mycomputerRecordHardware['os_name'],\
+			\
+			'Computer OS Version':str(mycomputerRecordHardware['os_version']),\
+			\
+			'Computer OS Build':formatMyComputerRecordHardwareOSBuild}"	
+			
+			appendJAMF_Computers_Hardware_Info = eval(appendDataToCVS_JAMF_Computers_Hardware_Info)
+			appendComputerHardwareColumns = appendJAMF_Computers_Hardware_Info
+			
+			#Set Columns	
+			Combined = MergeComputersInfo(computerColumns, appendComputerHardwareColumns, FileVault2Columns, LocalAccountColumns)
+			
+			#Set CSV File
+			dataToCsvComputers.append(Combined)	
+				
+		
+		if get_JAMF_Computers_Info_FileVault2_Users == ("yes"):
+			##########################################################################################		
+			# Get info for FileVautl2	
+			##########################################################################################
+			for FileVault2User in mycomputerRecordHardwareFileVault2Users :
+				
+				appendDataToCVS_JAMF_Computers_FileVault2_Info = "{'Type':'Computer Hardware FileVault2 Info',\
+				\
+				'Computer ID':mycomputerRecordGeneralID,\
+				\
+				'Computer Name':mycomputerRecordGeneral['name'],\
+				\
+				'Computer FileVault2 User':FileVault2User}"
+				
+				appendJAMF_Computers_FileVault2_Info = eval(appendDataToCVS_JAMF_Computers_FileVault2_Info)
+				appendComputerFileVault2Columns = appendJAMF_Computers_FileVault2_Info
+				
+				#Set Columns	
+				Combined = MergeComputersInfo(computerColumns, hardwareColumns, appendComputerFileVault2Columns, LocalAccountColumns)
+				
+				#Set CSV File
+				dataToCsvComputers.append(Combined)	
+		
+			
+		if get_JAMF_Computers_Info_Local_Account == ("yes"):
+			##########################################################################################		
+			# Get info for Local Accounts	
+			##########################################################################################
+			for computerLocalAccount in mycomputerRecordHardwareLocalAccounts:
+				
+				# Put current data into variable to filter
+				filterComputerLocalAccountData = computerLocalAccount['name']
+				
+				# Regex Pattern
+				filterPattern = r"^((?![_/][a-zA-Z]*))"
+				filterDefaultUserAccountsListdata = filterDefaultUserAccountsList
+				
+				if re.match(filterPattern, filterComputerLocalAccountData): #Check if regex is correct
+				
+					if filterComputerLocalAccountData not in filterDefaultUserAccountsListdata :
+						
+						verifyLocalAccountIsAdmin = computerLocalAccount['administrator']
+						computerLocalAccountName = computerLocalAccount['name']
+						computerLocalAccountRealName = computerLocalAccount['realname']
+						
+						#Set Variables if Data Available
+						if len(str(computerLocalAccount['uid'])) == 0:
+							computerLocalAccountUID = ''
+						else:
+							computerLocalAccountUID = int(computerLocalAccount['uid'])
+							
+						computerLocalAccountIsAdmin = verifyLocalAccountIsAdmin
+						computerInInLDAP = "false"
+						
+						if includeLocalAccountInfoLDAP == "yes":
+							
+							# Set up url for getting information from each configurationProfile ID from JAMF API
+							url = JAMF_url + JIMServerLDAPLookupURL + "/user/" + filterComputerLocalAccountData
+							
+							try:
+								response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+								
+								response.raise_for_status()
+								
+								verifyLocalAccount = response.json()
+								
+							except HTTPError as http_err:
+								print(f'HTTP error occurred: {http_err}')
+							except Exception as err:
+								print(f'Other error occurred: {err}')
+								
+							
+							# For Testing
+							#print(verifyLocalAccount)
+							
+							verifidLocalAccountRecords = verifyLocalAccount['ldap_users']
+							verifidLocalAccountRecords.sort(key=lambda item: item.get('id'), reverse=False)
+							
+							for localAccountRecord in verifidLocalAccountRecords :
+								
+								#print(localAccountRecord['username'])
+								
+								#Set Variables if Data Available
+								if len(str(localAccountRecord['uid'])) == 0:
+									computerLocalAccountUID = ''
+								else:
+									computerLocalAccountUID = int(localAccountRecord['uid'])
+									
+								
+								computerInInLDAP = "true"
+								
+								
+								#print(computerRecordID, compd']
+								computerInInLDAP = "true"
+								
+					
+						appendDataToCVS_JAMF_Computers_Local_Account_Info = "{'Type':'Computer Hardware Local Account Info',\
+						\
+						'Computer ID':mycomputerRecordGeneralID,\
+						\
+						'Computer Name':mycomputerRecordGeneral['name'],\
+						\
+						'Computer Local Account Name':computerLocalAccountName,\
+						\
+						'Computer Local Account Real Name':computerLocalAccountRealName,\
+						\
+						'Computer Local Account ID':computerLocalAccountUID,\
+						\
+						'Computer Local Account is Admin ':computerLocalAccountIsAdmin,\
+						\
+						'Computer Local Account in LDAP ':computerInInLDAP}"
+					
+						
+						appendJAMF_Computers_Local_Account_Info = eval(appendDataToCVS_JAMF_Computers_Local_Account_Info)
+						appendLocalAccountColumns = appendJAMF_Computers_Local_Account_Info
+					
+						#Set Columns	
+						Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, appendLocalAccountColumns)
+					
+						#Set CSV File
+						dataToCsvComputers.append(Combined)	
+				
+
+##################################################
+# Process Requested Info for Policies
+##################################################
+
 if get_JAMF_Policy_Info == ("yes"):
 	# Set up url for getting a list of all policies from JAMF API
 	url = JAMF_url + "/JSSResource/policies"
 	
-	response = requests.request("GET", url, headers=headers, auth = HTTPBasicAuth(username, password))
-	
-	resp = response.json()
+	try:
+		response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+		
+		response.raise_for_status()
+		
+		resp = response.json()
+		
+	except HTTPError as http_err:
+		print(f'HTTP error occurred: {http_err}')
+	except Exception as err:
+		print(f'Other error occurred: {err}')
 	
 	# For Testing
 	#print(response.json())
@@ -716,9 +1589,17 @@ if get_JAMF_Policy_Info == ("yes"):
 		# Set up url for getting information from each policy ID from JAMF API
 		url = JAMF_url + "/JSSResource/policies/id/" + PolicyID
 		
-		PolicyData = requests.request("GET", url, headers=headers, auth = HTTPBasicAuth(username, password))
-		
-		getPolicy = PolicyData.json()
+		try:
+			response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+			
+			response.raise_for_status()
+			
+			getPolicy = response.json()
+			
+		except HTTPError as http_err:
+			print(f'HTTP error occurred: {http_err}')
+		except Exception as err:
+			print(f'Other error occurred: {err}')
 		
 		# For Testing
 		#print(getPolicy)
@@ -764,17 +1645,28 @@ if get_JAMF_Policy_Info == ("yes"):
 		# Get info for Policies
 		print("Working on Policy ID: " + getMyPolicyID)
 		
+		#Set Variables if Data Available
+		if len(str(myPolicyGeneral['id'])) == 0:
+			myPolicyGeneralID = ''
+		else:
+			myPolicyGeneralID = int(myPolicyGeneral['id'])
+		
+		if len(str(myPolicyGeneralCatagory['id'])) == 0:
+			myPolicyGeneralCatagoryID = ''
+		else:
+			myPolicyGeneralCatagoryID = int(myPolicyGeneralCatagory['id'])
+		
 		#Get Catagory name and format for excel
 		formatMyPolicyGeneralCatagory = f"\"{myPolicyGeneralCatagory['name']}\""
 		
 		# Set Variables for Dict for Policy Info
 		appendDataToCVS_JAMF_Policy_Info = "{'Type':'Policy',\
 			\
-			'Policy ID':int(myPolicyGeneral['id']),\
+			'Policy ID':myPolicyGeneralID,\
 			\
 			'Policy Name':myPolicyGeneral['name'],\
 			\
-			'Policy Category ID':int(myPolicyGeneralCatagory['id']),\
+			'Policy Category ID':myPolicyGeneralCatagoryID,\
 			\
 			'Policy Category Name':formatMyPolicyGeneralCatagory}"
 		
@@ -795,11 +1687,11 @@ if get_JAMF_Policy_Info == ("yes"):
 				# Set Variables for Dict for Policy Info
 				appendDataToCVS_JAMF_Policy_SelfService_Info = "{'Type':'Policy Self Service Info',\
 				\
-				'Policy ID':int(myPolicyGeneral['id']),\
+				'Policy ID':myPolicyGeneralID,\
 				\
 				'Policy Name':myPolicyGeneral['name'],\
 				\
-				'Policy Category ID':int(myPolicyGeneralCatagory['id']),\
+				'Policy Category ID':myPolicyGeneralCatagoryID,\
 				\
 				'Policy Category Name':formatMyPolicyGeneralCatagory,\
 				\
@@ -822,19 +1714,26 @@ if get_JAMF_Policy_Info == ("yes"):
 			##########################################################################################
 			for computer in myPolicyScopeTargetsComputers:
 				
+				#Set Variables if Data Available
+				if len(str(computer['id'])) == 0:
+					computerID = ''
+				else:
+					computerID = int(computer['id'])
+					
+					
 				appendDataToCVS_JAMF_Policy_Target_Info = "{'Type':'Policy Computer Targets',\
 				\
-				'Policy ID':int(myPolicyGeneral['id']),\
+				'Policy ID':myPolicyGeneralID,\
 				\
 				'Policy Name':myPolicyGeneral['name'],\
 				\
-				'Policy Category ID':int(myPolicyGeneralCatagory['id']),\
+				'Policy Category ID':myPolicyGeneralCatagoryID,\
 				\
 				'Policy Category Name':formatMyPolicyGeneralCatagory,\
 				\
 				'Policy Target All Computers':str(myPolicyScopeTargetsAllComputers),\
 				\
-				'Policy Target Computer ID':int(computer['id']),\
+				'Policy Target Computer ID':computerID,\
 				\
 				'Policy Target Computer Name':computer['name']}"
 				
@@ -858,24 +1757,40 @@ if get_JAMF_Policy_Info == ("yes"):
 				#Get Group Info from JAMF API
 				url = JAMF_url + "/JSSResource/computergroups/id/" + targetGroupID
 				
-				targetGroupData = requests.request("GET", url, headers=headers, auth = HTTPBasicAuth(username, password))
-				
-				getTargetGroupData = targetGroupData.json()
+				try:
+					response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+					
+					response.raise_for_status()
+					
+					getTargetGroupData = response.json()
+					
+				except HTTPError as http_err:
+					print(f'HTTP error occurred: {http_err}')
+				except Exception as err:
+					print(f'Other error occurred: {err}')
+					
 				
 				#Computer Group Element for Target Groups
 				myTargetsComputerGroupInfo = getTargetGroupData['computer_group']
 				
+				#Set Variables if Data Available
+				if len(str(myTargetsComputerGroupInfo['id'])) == 0:
+					myTargetsComputerGroupInfoID = ''
+				else:
+					myTargetsComputerGroupInfoID = int(myTargetsComputerGroupInfo['id'])
+					
+					
 				appendDataToCVS_JAMF_Policy_Target_Group_Info = "{'Type':'Policy Computer Target Group',\
 				\
-				'Policy ID':int(myPolicyGeneral['id']),\
+				'Policy ID':myPolicyGeneralID,\
 				\
 				'Policy Name':myPolicyGeneral['name'],\
 				\
-				'Policy Category ID':int(myPolicyGeneralCatagory['id']),\
+				'Policy Category ID':myPolicyGeneralCatagoryID,\
 				\
 				'Policy Category Name':formatMyPolicyGeneralCatagory,\
 				\
-				'Policy Target Group ID':int(myTargetsComputerGroupInfo['id']),\
+				'Policy Target Group ID':myTargetsComputerGroupInfoID,\
 				\
 				'Policy Target Group Name':myTargetsComputerGroupInfo['name'],\
 				\
@@ -897,17 +1812,24 @@ if get_JAMF_Policy_Info == ("yes"):
 			##########################################################################################
 			for exclusion in myPolicyScopeExclusionsComputers:
 				
+				#Set Variables if Data Available
+				if len(str(exclusion['id'])) == 0:
+					exclusionID = ''
+				else:
+					exclusionID = int(exclusion['id'])
+					
+					
 				appendDataToCVS_JAMF_Policy_Exclusion_Info = "{'Type':'Policy Computer Exclusions',\
 				\
-				'Policy ID':int(myPolicyGeneral['id']),\
+				'Policy ID':myPolicyGeneralID,\
 				\
 				'Policy Name':myPolicyGeneral['name'],\
 				\
-				'Policy Category ID':int(myPolicyGeneralCatagory['id']),\
+				'Policy Category ID':myPolicyGeneralCatagoryID,\
 				\
 				'Policy Category Name':formatMyPolicyGeneralCatagory,\
 				\
-				'Policy Exclusion Computer ID':int(exclusion['id']),\
+				'Policy Exclusion Computer ID':exclusionID,\
 				\
 				'Policy Exclusion Computer Name':exclusion['name']}"
 				
@@ -931,23 +1853,39 @@ if get_JAMF_Policy_Info == ("yes"):
 				#Get Group Info from JAMF API
 				url = JAMF_url + "/JSSResource/computergroups/id/" + exclusionGroupID
 				
-				exclusionGroupData = requests.request("GET", url, headers=headers, auth = HTTPBasicAuth(username, password))
-				
-				getExclusionGroupData = exclusionGroupData.json()
+				try:
+					response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+					
+					response.raise_for_status()
+					
+					getExclusionGroupData = response.json()
+					
+				except HTTPError as http_err:
+					print(f'HTTP error occurred: {http_err}')
+				except Exception as err:
+					print(f'Other error occurred: {err}')
+					
 				
 				myExclusionsComputerGroupInfo = getExclusionGroupData['computer_group']
 				
+				#Set Variables if Data Available
+				if len(str(myExclusionsComputerGroupInfo['id'])) == 0:
+					myExclusionsComputerGroupInfoID = ''
+				else:
+					myExclusionsComputerGroupInfoID = int(myExclusionsComputerGroupInfo['id'])
+					
+					
 				appendDataToCVS_JAMF_Policy_Exclusion_Group_Info = "{'Type':'Policy Computer Exclusions Group',\
 				\
-				'Policy ID':int(myPolicyGeneral['id']),\
+				'Policy ID':myPolicyGeneralID,\
 				\
 				'Policy Name':myPolicyGeneral['name'],\
 				\
-				'Policy Category ID':int(myPolicyGeneralCatagory['id']),\
+				'Policy Category ID':myPolicyGeneralCatagoryID,\
 				\
 				'Policy Category Name':formatMyPolicyGeneralCatagory,\
 				\
-				'Policy Exclusion Group id':int(myExclusionsComputerGroupInfo['id']),\
+				'Policy Exclusion Group id':myExclusionsComputerGroupInfoID,\
 				\
 				'Policy Exclusion Group Name':myExclusionsComputerGroupInfo['name'],\
 				\
@@ -974,25 +1912,41 @@ if get_JAMF_Policy_Info == ("yes"):
 				#Get Group Info from JAMF API
 				url = JAMF_url + "/JSSResource/packages/id/" + packageID
 				
-				packageData = requests.request("GET", url, headers=headers, auth = HTTPBasicAuth(username, password))
-				
-				getPackageData = packageData.json()
+				try:
+					response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+					
+					response.raise_for_status()
+					
+					getPackageData = response.json()
+					
+				except HTTPError as http_err:
+					print(f'HTTP error occurred: {http_err}')
+				except Exception as err:
+					print(f'Other error occurred: {err}')
+					
 				
 				myPackageInfo = getPackageData['package']
 				
 				formatMyPackageInfoCatagory = f"\"{myPackageInfo['category']}\""
 				
+				#Set Variables if Data Available
+				if len(str(myPackageInfo['id'])) == 0:
+					myPackageInfoID = ''
+				else:
+					myPackageInfoID = int(myPackageInfo['id'])
+					
+					
 				appendDataToCVS_JAMF_Policy_Packages_Info = "{'Type':'Policy Package',\
 				\
-				'Policy ID':int(myPolicyGeneral['id']),\
+				'Policy ID':myPolicyGeneralID,\
 				\
 				'Policy Name':myPolicyGeneral['name'],\
 				\
-				'Policy Category ID':int(myPolicyGeneralCatagory['id']),\
+				'Policy Category ID':myPolicyGeneralCatagoryID,\
 				\
 				'Policy Category Name':formatMyPolicyGeneralCatagory,\
 				\
-				'Policy Package ID':int(myPackageInfo['id']),\
+				'Policy Package ID':myPackageInfoID,\
 				\
 				'Policy Package Name':myPackageInfo['name'],\
 				\
@@ -1021,25 +1975,40 @@ if get_JAMF_Policy_Info == ("yes"):
 				#Get Group Info from JAMF API
 				url = JAMF_url + "/JSSResource/scripts/id/" + scriptID
 				
-				scriptData = requests.request("GET", url, headers=headers, auth = HTTPBasicAuth(username, password))
-				
-				getScriptData = scriptData.json()
+				try:
+					response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+					
+					response.raise_for_status()
+					
+					getScriptData = response.json()
+					
+				except HTTPError as http_err:
+					print(f'HTTP error occurred: {http_err}')
+				except Exception as err:
+					print(f'Other error occurred: {err}')
+					
 				
 				myScriptInfo = getScriptData['script']
 				
 				formatMyScriptsinfoCatagory = f"\"{myScriptInfo['category']}\""
 				
+				#Set Variables if Data Available
+				if len(str(myScriptInfo['id'])) == 0:
+					myScriptInfoID = ''
+				else:
+					myScriptInfoID = int(myScriptInfo['id'])
+					
 				appendDataToCVS_JAMF_Policy_Scripts_Info = "{'Type':'Policy Scripts',\
 				\
-				'Policy ID':int(myPolicyGeneral['id']),\
+				'Policy ID':myPolicyGeneralID,\
 				\
 				'Policy Name':myPolicyGeneral['name'],\
 				\
-				'Policy Category ID':int(myPolicyGeneralCatagory['id']),\
+				'Policy Category ID':myPolicyGeneralCatagoryID,\
 				\
 				'Policy Category Name':formatMyPolicyGeneralCatagory,\
 				\
-				'Policy Script ID':int(myScriptInfo['id']),\
+				'Policy Script ID':myScriptInfoID,\
 				\
 				'Policy Script Name':myScriptInfo['name'],\
 				\
@@ -1069,9 +2038,17 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 	# Set up url for getting a list of all Configuration Profiles from JAMF API
 	url = JAMF_url + "/JSSResource/osxconfigurationprofiles"
 	
-	response = requests.request("GET", url, headers=headers, auth = HTTPBasicAuth(username, password))
-	
-	resp = response.json()
+	try:
+		response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+		
+		response.raise_for_status()
+		
+		resp = response.json()
+		
+	except HTTPError as http_err:
+		print(f'HTTP error occurred: {http_err}')
+	except Exception as err:
+		print(f'Other error occurred: {err}')
 	
 	# For Testing
 	#print(response.json())
@@ -1092,9 +2069,18 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 		# Set up url for getting information from each configurationProfile ID from JAMF API
 		url = JAMF_url + "/JSSResource/osxconfigurationprofiles/id/" + configurationProfileID
 		
-		configurationProfileData = requests.request("GET", url, headers=headers, auth = HTTPBasicAuth(username, password))
-		
-		getConfigurationProfile = configurationProfileData.json()
+		try:
+			response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+			
+			response.raise_for_status()
+			
+			getConfigurationProfile = response.json()
+			
+		except HTTPError as http_err:
+			print(f'HTTP error occurred: {http_err}')
+		except Exception as err:
+			print(f'Other error occurred: {err}')
+			
 		
 		# For Testing
 		#print(getConfigurationProfile)
@@ -1129,14 +2115,27 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 		
 		formatMyConfigurationProfileGeneralCatagory = f"\"{myConfigurationProfileGeneralCatagory['name']}\""
 		
+		#Set Variables if Data Available
+		if len(str(myConfigurationProfileGeneral['id'])) == 0:
+			myConfigurationProfileGeneralID = ''
+		else:
+			myConfigurationProfileGeneralID = int(myConfigurationProfileGeneral['id'])
+		
+		#Set Variables if Data Available
+		if len(str(myConfigurationProfileGeneralCatagory['id'])) == 0:
+			myConfigurationProfileGeneralCatagoryID = ''
+		else:
+			myConfigurationProfileGeneralCatagoryID = int(myConfigurationProfileGeneralCatagory['id'])
+			
+			
 		# Set Variables for Dict for Configuration Profile Info
 		appendDataToCVS_JAMF_Configuration_Profile_Info = "{'Configuration Profile Type':'Configuration Profile',\
 		\
-		'Configuration Profile ID':int(myConfigurationProfileGeneral['id']),\
+		'Configuration Profile ID':myConfigurationProfileGeneralID,\
 		\
 		'Configuration Profile Name':myConfigurationProfileGeneral['name'],\
 		\
-		'Configuration Profile Category ID':int(myConfigurationProfileGeneralCatagory['id']),\
+		'Configuration Profile Category ID':myConfigurationProfileGeneralCatagoryID,\
 		\
 		'Configuration Profile Category Name':formatMyConfigurationProfileGeneralCatagory}"
 		
@@ -1158,15 +2157,15 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 				
 				appendDataToCVS_JAMF_Configuration_Profile_Target_Info = "{'Configuration Profile Type':'Configuration Profile Target Computer',\
 				\
-				'Configuration Profile ID':int(myConfigurationProfileGeneral['id']),\
+				'Configuration Profile ID':myConfigurationProfileGeneralID,\
 				\
 				'Configuration Profile Name':myConfigurationProfileGeneral['name'],\
 				\
-				'Configuration Profile Category ID':int(myConfigurationProfileGeneralCatagory['id']),\
+				'Configuration Profile Category ID':myConfigurationProfileGeneralCatagoryID,\
 				\
 				'Configuration Profile Category Name':formatMyConfigurationProfileGeneralCatagory,\
 				\
-				'Configuration Profile Target Computer ID':int(computer['id']),\
+				'Configuration Profile Target Computer ID':computerID,\
 				\
 				'Configuration Profile Target Computer Name':computer['name']}"
 				
@@ -1190,26 +2189,41 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 				#Get Group Info from JAMF API
 				url = JAMF_url + "/JSSResource/computergroups/id/" + targetGroupID
 				
-				targetGroupData = requests.request("GET", url, headers=headers, auth = HTTPBasicAuth(username, password))
-				
-				getTargetGroupData = targetGroupData.json()
+				try:
+					response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+					
+					response.raise_for_status()
+					
+					getTargetGroupData = response.json()
+					
+				except HTTPError as http_err:
+					print(f'HTTP error occurred: {http_err}')
+				except Exception as err:
+					print(f'Other error occurred: {err}')
+					
 				
 				#Computer Group Element for Target Groups
 				myTargetsComputerGroupInfo = getTargetGroupData['computer_group']
 				
-				
+				#Set Variables if Data Available
+				if len(str(myTargetsComputerGroupInfo['id'])) == 0:
+					myTargetsComputerGroupInfoID = ''
+				else:
+					myTargetsComputerGroupInfoID = int(myTargetsComputerGroupInfo['id'])
+					
+					
 				# Get info for Target Computer Group
 				appendDataToCVS_JAMF_Configuration_Profile_Target_Group_Info = "{'Configuration Profile Type':'Configuration Profile Target Computer Group',\
 				\
-				'Configuration Profile ID':int(myConfigurationProfileGeneral['id']),\
+				'Configuration Profile ID':myConfigurationProfileGeneralID,\
 				\
 				'Configuration Profile Name':myConfigurationProfileGeneral['name'],\
 				\
-				'Configuration Profile Category ID':int(myConfigurationProfileGeneralCatagory['id']),\
+				'Configuration Profile Category ID':myConfigurationProfileGeneralCatagoryID,\
 				\
 				'Configuration Profile Category Name':formatMyConfigurationProfileGeneralCatagory,\
 				\
-				'Configuration Profile Target Group ID':int(myTargetsComputerGroupInfo['id']),\
+				'Configuration Profile Target Group ID':myTargetsComputerGroupInfoID,\
 				\
 				'Configuration Profile Target Group Name':myTargetsComputerGroupInfo['name'],\
 				\
@@ -1232,17 +2246,24 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 			##########################################################################################
 			for exclusion in myConfigurationProfileScopeExclusionsComputers:
 				
+				#Set Variables if Data Available
+				if len(str(exclusion['id'])) == 0:
+					exclusionID = ''
+				else:
+					exclusionID = int(exclusion['id'])
+					
+					
 				appendDataToCVS_JAMF_Configuration_Profile_Exclusion_Info = "{'Configuration Profile Type':'Configuration Profile Exclusion Computers',\
 				\
-				'Configuration Profile ID':int(myConfigurationProfileGeneral['id']),\
+				'Configuration Profile ID':myConfigurationProfileGeneralID,\
 				\
 				'Configuration Profile Name':myConfigurationProfileGeneral['name'],\
 				\
-				'Configuration Profile Category ID':int(myConfigurationProfileGeneralCatagory['id']),\
+				'Configuration Profile Category ID':myConfigurationProfileGeneralCatagoryID,\
 				\
 				'Configuration Profile Category Name':formatMyConfigurationProfileGeneralCatagory,\
 				\
-				'Configuration Profile Exclusion Computer id':int(exclusion['id']),\
+				'Configuration Profile Exclusion Computer id':exclusionID,\
 				\
 				'Configuration Profile Exclusion Computer Name':exclusion['name']}"
 				
@@ -1266,23 +2287,39 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 				#Get Group Info from JAMF API
 				url = JAMF_url + "/JSSResource/computergroups/id/" + exclusionGroupID
 				
-				exclusionGroupData = requests.request("GET", url, headers=headers, auth = HTTPBasicAuth(username, password))
-				
-				getExclusionGroupData = exclusionGroupData.json()
+				try:
+					response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+					
+					response.raise_for_status()
+					
+					getExclusionGroupData = response.json()
+					
+				except HTTPError as http_err:
+					print(f'HTTP error occurred: {http_err}')
+				except Exception as err:
+					print(f'Other error occurred: {err}')
+					
 				
 				myExclusionsComputerGroupInfo = getExclusionGroupData['computer_group']
 				
+				#Set Variables if Data Available
+				if len(str(myExclusionsComputerGroupInfo['id'])) == 0:
+					myExclusionsComputerGroupInfoID = ''
+				else:
+					myExclusionsComputerGroupInfoID = int(myExclusionsComputerGroupInfo['id'])
+					
+					
 				appendDataToCVS_JAMF_Configuration_Profile_Exclusion_Groups_Info = "{'Configuration Profile Type':'Configuration Profile Exclusion Computer Groups',\
 				\
-				'Configuration Profile ID':int(myConfigurationProfileGeneral['id']),\
+				'Configuration Profile ID':myConfigurationProfileGeneralID,\
 				\
 				'Configuration Profile Name':myConfigurationProfileGeneral['name'],\
 				\
-				'Configuration Profile Category ID':int(myConfigurationProfileGeneralCatagory['id']),\
+				'Configuration Profile Category ID':myConfigurationProfileGeneralCatagoryID,\
 				\
 				'Configuration Profile Category Name':formatMyConfigurationProfileGeneralCatagory,\
 				\
-				'Configuration Profile Exclusion Group id':int(myExclusionsComputerGroupInfo['id']),\
+				'Configuration Profile Exclusion Group id':myExclusionsComputerGroupInfoID,\
 				\
 				'Configuration Profile Exclusion Group Name':myExclusionsComputerGroupInfo['name'],\
 				\
@@ -1302,20 +2339,28 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 # Process data for Export to csv / Excel
 ##########################################################################################
 # Check and make sure that either Policy or Config Profile was selected
-if get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes':
+if get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes' or get_JAMF_Computers_Info == 'yes':
 	
 	# Get export to csv file
+	if get_JAMF_Computers_Info == ("yes"):
+		df_computers = pd.DataFrame(dataToCsvComputers)
+		
 	if get_JAMF_Policy_Info == ("yes"):
 		df_policy = pd.DataFrame(dataToCsvPolicy)
 		
 	if get_JAMF_Configuration_Profile_Info == ("yes"):	
 		df_configProfile = pd.DataFrame(dataToCsvConfigurationProfile)
+
 	
-	print('Creating Jamf Instance Info file.')
+	print('\n******************** Creating Jamf Instance Info file. ********************\n')
+	
 	
 	# We'll define an Excel writer object and the target file
-	Excelwriter = pd.ExcelWriter("Jamf_Instance_Info.xlsx", engine="xlsxwriter")
+	Excelwriter = pd.ExcelWriter(excelReportFile, engine="xlsxwriter")
 	
+	if get_JAMF_Computers_Info == ("yes"):
+		df_computers.to_excel(Excelwriter, sheet_name='Jamf Computers Info')
+		
 	if get_JAMF_Policy_Info == ("yes"):
 		df_policy.to_excel(Excelwriter, sheet_name='Jamf Policy Info')
 	
@@ -1325,8 +2370,8 @@ if get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes'
 	#And finally we save the file
 	Excelwriter.save()
 	
-	print("Jamf Instance	 Info file is now Complete")
+	print("\n******************** Jamf Instance Info file is now Complete. ********************\n")
 	
 else:
 	
-	print("No Options Selected. No Report to Run.")
+	print("\n******************** No Options Selected. No Report to Run. ********************\n")
