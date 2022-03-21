@@ -253,9 +253,9 @@ filterDefaultUserAccountsList = ['daemon', 'jamfmgmt', 'nobody', 'root']
 
 
 #CLA for terminal
-APILoginURL = sys.argv[1]
-APIUsername = sys.argv[2]
-APIPassword = sys.argv[3]
+APILoginURL = ''
+APIUsername = ''
+APIPassword = ''
 
 
 ##########################################################################################
