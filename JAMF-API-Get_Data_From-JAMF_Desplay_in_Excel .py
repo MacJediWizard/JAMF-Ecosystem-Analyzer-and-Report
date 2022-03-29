@@ -252,11 +252,31 @@ get_JAMF_URL_User_Test = "/JSSResource/accounts/username/"
 filterDefaultUserAccountsList = ['daemon', 'jamfmgmt', 'nobody', 'root']
 
 
-#CLA for terminal
-APILoginURL = ''
-APIUsername = ''
-APIPassword = ''
-
+#Check CLA for input
+if len(sys.argv) == 1:
+	# No CLA Given
+	APILoginURL = ""
+	APIUsername = ""
+	APIPassword = ""
+	
+elif len(sys.argv) == 2:
+	# No CLA Given
+	APILoginURL = sys.argv[1]
+	APIUsername = ""
+	APIPassword = ""
+	
+elif len(sys.argv) == 3:
+	# No CLA Given
+	APILoginURL = sys.argv[1]
+	APIUsername = sys.argv[2]
+	APIPassword = ""
+	
+elif len(sys.argv) == 4:
+	# No CLA Given
+	APILoginURL = sys.argv[1]
+	APIUsername = sys.argv[2]
+	APIPassword = sys.argv[3]
+		
 
 ##########################################################################################
 # Jamf API Setup Information
@@ -348,7 +368,7 @@ def JAMFInfoCheck(url, username, password):
 	#Exception
 	except requests.exceptions.RequestException as e:
 		# print URL with Erors
-		raise SystemExit(f"\nUser Input is NOT OK, we cannot connect to JAMF API and now will EXIT! \nErr: {e}")
+		raise SystemExit(f"\nUser Input is NOT OK, we cannot connect to JAMF API and now will EXIT! \n\nErr: {e}")
 
 
 # let user choose Options from list
