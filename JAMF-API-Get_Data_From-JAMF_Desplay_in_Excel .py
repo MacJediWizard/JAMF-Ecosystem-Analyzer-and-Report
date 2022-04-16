@@ -8,6 +8,7 @@
 #
 #	Version 1.0	- Initial Creation of Script.
 #	Version 2.0 - Adding Computer fields and sheets to report
+#	Version 3.0 - Adding Bearer Token Auth for requests
 #
 #	This script take User Imput and will call the JAMF API and get all Information 
 #	related to a Policy, Configuration Profile, and Computers.
@@ -153,6 +154,9 @@
 #	check to see what accounts are in LDAP. Great for when you use a JIM server.
 #	
 #	It wall also look up all JIM servers and let you choose the one you want to use.
+#
+#	The script uses the new bearer token auth for the API calls and then
+#	invalidates it when script is complete.
 #
 #
 ##########################################################################################
@@ -525,8 +529,32 @@ else:
 JAMFInfoCheck((get_JAMF_URL+get_JAMF_URL_User_Test+get_JAMF_API_Username), get_JAMF_API_Username, get_JAMF_API_Password)
 
 
+##########################################################################################
+# JAMF API Variables
+##########################################################################################
+JAMF_url = get_JAMF_URL
+username = get_JAMF_API_Username
+password = get_JAMF_API_Password
+
+
+# Get Bearer token from JAMF API since we confirmed the Username and Password
+btURL = JAMF_url + "/api/v1/auth/token"
+token = http.post(btURL, headers=headers, auth = HTTPBasicAuth(username, password))
+bearer = token.json()['token']
+
+
+# requests headers with token auth
+btHeaders = {
+	'Accept': 'application/json',
+	'Authorization': 'Bearer '+bearer
+}
+
+
+##########################################################################################
+# Get Report Config Input
+##########################################################################################
 # Get Main Groups Section.
-print("\n******************** JAMF API File Info ********************\n")
+print("\n******************** JAMF API Excel File Info ********************\n")
 get_JAMF_FilePath_Info = checkFilePath("Please enter the full path where you want to save the file (ex. \"/Users/Shared/\") : ")
 get_JAMF_FileName_Info = checkFileName("Please enter the name you want to save the excel file as. (ex. \"myExcelFile.xlsx\") : ")
 
@@ -542,18 +570,10 @@ if confirmExcelReportFile == 'yes':
 
 
 # Get Main Groups Section.
-print("\n\n******************** JAMF API Report Excel Sheets ********************\n")
+print("\n\n******************** JAMF API Report Included Excel Sheets ********************\n")
 get_JAMF_Computers_Info = getYesOrNoInput("Do you want to include JAMF Computer Info Section in Report? (yes or no): ")
 get_JAMF_Policy_Info = getYesOrNoInput("Do you want to include JAMF Policy Info Section in Report? (yes or no): ")
 get_JAMF_Configuration_Profile_Info = getYesOrNoInput("Do you want to include JAMF Configuration Profile Info Section in Report? (yes or no): ")
-
-
-##########################################################################################
-# JAMF API Variables
-##########################################################################################
-JAMF_url = get_JAMF_URL
-username = get_JAMF_API_Username
-password = get_JAMF_API_Password
 
 
 ##########################################################################################
@@ -562,6 +582,8 @@ password = get_JAMF_API_Password
 ##################################################
 # Get Jamf Computer Info
 ##################################################
+print("\n\n******************** JAMF API Report Included Excel Sheets Config Info ********************\n")
+
 if get_JAMF_Computers_Info == ("yes"):
 	
 	#Get Computer Info
@@ -637,7 +659,7 @@ if get_JAMF_Computers_Info == ("yes"):
 			url = JAMF_url + "/JSSResource/ldapservers"
 			
 			try:
-				response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+				response = http.get(url, headers=btHeaders)
 			
 				response.raise_for_status()
 
@@ -684,6 +706,8 @@ if get_JAMF_Computers_Info == ("yes"):
 ##################################################
 # Get Jamf Policy Info
 ##################################################
+print("\n\n******************** JAMF API Report Included Excel Sheets Config Info ********************\n")
+
 if get_JAMF_Policy_Info == ("yes"):
 	
 	#Get Policy Info
@@ -779,6 +803,8 @@ elif get_JAMF_Policy_Info == ("no"):
 ##################################################
 # Get Configuration Profile Info
 ##################################################
+print("\n\n******************** JAMF API Report Included Excel Sheets Config Info ********************\n")
+
 if get_JAMF_Configuration_Profile_Info == ("yes"):
 	
 	#Get Configuration Profile Info
@@ -1342,7 +1368,7 @@ if get_JAMF_Computers_Info == ("yes"):
 		url = JAMF_url + "/JSSResource/computers"
 	
 	try:
-		response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+		response = http.get(url, headers=btHeaders)
 		
 		response.raise_for_status()
 		
@@ -1389,7 +1415,7 @@ if get_JAMF_Computers_Info == ("yes"):
 		url = JAMF_url + "/JSSResource/computers/id/" + computerRecordID
 		
 		try:
-			response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+			response = http.get(url, headers=btHeaders)
 			
 			response.raise_for_status()
 			
@@ -1557,7 +1583,7 @@ if get_JAMF_Computers_Info == ("yes"):
 							url = JAMF_url + JIMServerLDAPLookupURL + "/user/" + filterComputerLocalAccountData
 							
 							try:
-								response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+								response = http.get(url, headers=btHeaders)
 								
 								response.raise_for_status()
 								
@@ -1629,7 +1655,7 @@ if get_JAMF_Policy_Info == ("yes"):
 	url = JAMF_url + "/JSSResource/policies"
 	
 	try:
-		response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+		response = http.get(url, headers=btHeaders)
 		
 		response.raise_for_status()
 		
@@ -1660,7 +1686,7 @@ if get_JAMF_Policy_Info == ("yes"):
 		url = JAMF_url + "/JSSResource/policies/id/" + PolicyID
 		
 		try:
-			response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+			response = http.get(url, headers=btHeaders)
 			
 			response.raise_for_status()
 			
@@ -1828,7 +1854,7 @@ if get_JAMF_Policy_Info == ("yes"):
 				url = JAMF_url + "/JSSResource/computergroups/id/" + targetGroupID
 				
 				try:
-					response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+					response = http.get(url, headers=btHeaders)
 					
 					response.raise_for_status()
 					
@@ -1924,7 +1950,7 @@ if get_JAMF_Policy_Info == ("yes"):
 				url = JAMF_url + "/JSSResource/computergroups/id/" + exclusionGroupID
 				
 				try:
-					response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+					response = http.get(url, headers=btHeaders)
 					
 					response.raise_for_status()
 					
@@ -1983,7 +2009,7 @@ if get_JAMF_Policy_Info == ("yes"):
 				url = JAMF_url + "/JSSResource/packages/id/" + packageID
 				
 				try:
-					response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+					response = http.get(url, headers=btHeaders)
 					
 					response.raise_for_status()
 					
@@ -2046,7 +2072,7 @@ if get_JAMF_Policy_Info == ("yes"):
 				url = JAMF_url + "/JSSResource/scripts/id/" + scriptID
 				
 				try:
-					response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+					response = http.get(url, headers=btHeaders)
 					
 					response.raise_for_status()
 					
@@ -2109,7 +2135,7 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 	url = JAMF_url + "/JSSResource/osxconfigurationprofiles"
 	
 	try:
-		response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+		response = http.get(url, headers=btHeaders)
 		
 		response.raise_for_status()
 		
@@ -2140,7 +2166,7 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 		url = JAMF_url + "/JSSResource/osxconfigurationprofiles/id/" + configurationProfileID
 		
 		try:
-			response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+			response = http.get(url, headers=btHeaders)
 			
 			response.raise_for_status()
 			
@@ -2260,7 +2286,7 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 				url = JAMF_url + "/JSSResource/computergroups/id/" + targetGroupID
 				
 				try:
-					response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+					response = http.get(url, headers=btHeaders)
 					
 					response.raise_for_status()
 					
@@ -2358,7 +2384,7 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 				url = JAMF_url + "/JSSResource/computergroups/id/" + exclusionGroupID
 				
 				try:
-					response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+					response = http.get(url, headers=btHeaders)
 					
 					response.raise_for_status()
 					
@@ -2445,3 +2471,16 @@ if get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes'
 else:
 	
 	print("\n******************** No Options Selected. No Report to Run. ********************\n")
+	
+
+# Invalidate Bearer Token
+
+invalidateBearerTokenURL = JAMF_url + "/api/v1/auth/invalidate-token"
+	
+try:
+	invalidateToken = http.post(invalidateBearerTokenURL, headers=btHeaders)
+	
+except HTTPError as http_err:
+	print(f'HTTP error occurred: {http_err}')
+except Exception as err:
+	print(f'Other error occurred: {err}')
