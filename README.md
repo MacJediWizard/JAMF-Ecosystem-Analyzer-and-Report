@@ -145,3 +145,5 @@
 		check to see what accounts are in LDAP. Great for when you use a JIM server.
 		
 		It will also look up all JIM servers and let you choose the one you want to use.
+		
+		The script now uses the new bearer token for auth in API calls.
