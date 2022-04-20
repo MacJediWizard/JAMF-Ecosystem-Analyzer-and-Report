@@ -9,6 +9,7 @@
 #	Version 1.0	- Initial Creation of Script.
 #	Version 2.0 - Adding Computer fields and sheets to report
 #	Version 3.0 - Adding Bearer Token Auth for requests
+#	Version 4.0 - Adding Package to policy / Prestage Policy lookup for unused packages.
 #
 #	This script take User Imput and will call the JAMF API and get all Information 
 #	related to a Policy, Configuration Profile, and Computers.
@@ -245,6 +246,7 @@ except ImportError:
 dataToCsvComputers = []
 dataToCsvPolicy = []
 dataToCsvConfigurationProfile = []
+dataToCsvPackageToPolicy = []
 JIMServerList = []
 
 
@@ -487,6 +489,15 @@ def confirmExcelFileName(prompt):
 	return value
 
 
+def checkIfPackageIsUsedInPolicy(data, key, value):
+	for i in range(len(data)):
+		try:
+			if(data[i][key]==value): return True
+		except:
+			pass
+	return False
+
+
 ##########################################################################################
 # Get User Input
 ##########################################################################################
@@ -574,6 +585,7 @@ print("\n\n******************** JAMF API Report Included Excel Sheets **********
 get_JAMF_Computers_Info = getYesOrNoInput("Do you want to include JAMF Computer Info Section in Report? (yes or no): ")
 get_JAMF_Policy_Info = getYesOrNoInput("Do you want to include JAMF Policy Info Section in Report? (yes or no): ")
 get_JAMF_Configuration_Profile_Info = getYesOrNoInput("Do you want to include JAMF Configuration Profile Info Section in Report? (yes or no): ")
+get_JAMF_Package_To_Policy_Info = getYesOrNoInput("Do you want to include JAMF Package To Policy Info Section in Report? (yes or no): ")
 
 
 ##########################################################################################
@@ -702,6 +714,13 @@ if get_JAMF_Computers_Info == ("yes"):
 		print("\nNot including Local Account Info Data.\n\n")
 		includeLocalAccountInfo = "no"
 
+elif get_JAMF_Computers_Info == ("no"):
+	
+	includeComputerInfo = "no"
+	usingSmartGroup = "no"
+	includeHardwareInfo = "no"
+	includeFileVault2Info = "no"
+	includeLocalAccountInfo = "no"
 
 ##################################################
 # Get Jamf Policy Info
@@ -850,10 +869,38 @@ elif get_JAMF_Configuration_Profile_Info == ("no"):
 	
 
 ##################################################
+# Get Jamf Package To Policy Info
+##################################################
+print("\n\n******************** JAMF API Report Included Package To Policy Info ********************\n")
+
+if get_JAMF_Package_To_Policy_Info == ("yes"):
+	
+	#Get Package To Policy Info
+	print("\nIncluding JAMF Regular Package Info.\n\n")
+	
+	includeRegularPackageToPolicyInfo = "yes"
+	
+	#Get Policy Exclusions
+	print("\n******************** JAMF API Package To Policy in PreStage Policy Section. ********************\n")
+	get_JAMF_Policy_in_PreStage_Policy_Info = getYesOrNoInput("Do you want to include JAMF Package To Policy in PreStage Policy Info in Report? (yes or no): ")
+	if get_JAMF_Policy_in_PreStage_Policy_Info == ("yes"):
+		
+		print("\nIncluding PreStage Policy Info.\n\n")
+		
+		includePreStagePackageToPolicyInfo = "yes"
+		
+	elif get_JAMF_Configuration_Profile_Info_Exclusions == ("no"):
+		
+		print("\nNot Including PreStage Policy Info.\n\n")
+		
+		includePreStagePackageToPolicyInfo = "no"
+
+				
+##################################################
 # Set Variables for dict
 ##################################################
 #Check Options set and desplay message to user
-if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes':
+if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes' or get_JAMF_Package_To_Policy_Info == 'yes':
 	
 	print("\n******************** Running Requested Report Now. ********************\n\n")
 	
@@ -974,7 +1021,9 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	'Policy Script Filename':''}"
 	
 	
+	##################################################
 	# Set Variables for Dict for Configuration Profile Info
+	##################################################
 	dataToCVS_JAMF_Configuration_Profile_Info = "{'Configuration Profile ID':'',\
 	\
 	'Configuration Profile Type':'',\
@@ -1006,6 +1055,50 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	'Configuration Profile Exclusion Group Name':'',\
 	\
 	'Configuration Profile Exclusion Group is Smart':''}"
+	
+	
+	##################################################
+	# Set Variables for Dict for Packages to Policies Info
+	##################################################
+	dataToCVS_JAMF_Package_To_Regular_Policy_Info = "{'Type':'',\
+	\
+	'Package List':'',\
+	\
+	'Package ID':'',\
+	\
+	'Package Name':'',\
+	\
+	'Package File Name':'',\
+	\
+	'Policy ID':'',\
+	\
+	'Policy Name':''}"
+	
+	
+	dataToCVS_JAMF_Package_To_PreStage_Policy_Info = "{'Type':'',\
+	\
+	'Package List':'',\
+	\
+	'Package ID':'',\
+	\
+	'Package Name':'',\
+	\
+	'Package File Name':'',\
+	\
+	'Policy ID':'',\
+	\
+	'Policy Name':''}"
+	
+	
+	dataToCVS_JAMF_Package_Unused_Info = "{'Type':'',\
+	\
+	'Package List':'',\
+	\
+	'Package ID':'',\
+	\
+	'Package Name':'',\
+	\
+	'Package File Name':''}"
 	
 
 	##################################################
@@ -1161,6 +1254,50 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	
 	
 	##################################################
+	# Set Variables for Dict for Configuration Profile Info to empty
+	##################################################
+	dataToCVS_JAMF_Package_To_Regular_Policy_Info_Empty = "{'Type':'',\
+	\
+	'Package List':'',\
+	\
+	'Package ID':'',\
+	\
+	'Package Name':'',\
+	\
+	'Package File Name':'',\
+	\
+	'Policy ID':'',\
+	\
+	'Policy Name':''}"
+	
+	
+	dataToCVS_JAMF_Package_To_PreStage_Policy_Info_Empty = "{'Type':'',\
+	\
+	'Package List':'',\
+	\
+	'Package ID':'',\
+	\
+	'Package Name':'',\
+	\
+	'Package File Name':'',\
+	\
+	'Policy ID':'',\
+	\
+	'Policy Name':''}"
+	
+	
+	dataToCVS_JAMF_Package_Unused_Info_Empty = "{'Type':'',\
+	\
+	'Package List':'',\
+	\
+	'Package ID':'',\
+	\
+	'Package Name':'',\
+	\
+	'Package File Name':''}"
+	
+	
+	##################################################
 	# Take Variables and make Dict
 	##################################################
 	# Computers Info
@@ -1181,6 +1318,11 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	JAMF_Configuration_Profile_Info = eval(dataToCVS_JAMF_Configuration_Profile_Info)
 	JAMF_Configuration_Profile_Target_Info = eval(dataToCVS_JAMF_Configuration_Profile_Target_Info)
 	JAMF_Configuration_Profile_Exclusion_Info = eval(dataToCVS_JAMF_Configuration_Profile_Exclusion_Info)
+	
+	# Package to Policy Info
+	JAMF_Package_To_Regular_Policy_Info = eval(dataToCVS_JAMF_Package_To_Regular_Policy_Info)
+	JAMF_Package_To_PreStage_Policy_Info = eval(dataToCVS_JAMF_Package_To_PreStage_Policy_Info)
+	JAMF_Package_Unused_Info = eval(dataToCVS_JAMF_Package_Unused_Info)
 	
 	
 	##################################################
@@ -1204,6 +1346,11 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	JAMF_Configuration_Profile_Info_Empty = eval(dataToCVS_JAMF_Configuration_Profile_Info_Empty)
 	JAMF_Configuration_Profile_Target_Info_Empty = eval(dataToCVS_JAMF_Configuration_Profile_Target_Info_Empty)
 	JAMF_Configuration_Profile_Exclusion_Info_Empty = eval(dataToCVS_JAMF_Configuration_Profile_Exclusion_Info_Empty)
+	
+	# Package to Policy Info
+	JAMF_Package_To_Regular_Policy_Info_Empty = eval(dataToCVS_JAMF_Package_To_Regular_Policy_Info_Empty)
+	JAMF_Package_To_PreStage_Policy_Info_Empty = eval(dataToCVS_JAMF_Package_To_PreStage_Policy_Info_Empty)
+	JAMF_Package_Unused_Info_Empty = eval(dataToCVS_JAMF_Package_Unused_Info_Empty)
 	
 	
 	##################################################
@@ -1348,7 +1495,34 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 		configProfileColumns = JAMF_Configuration_Profile_Info_Empty
 		configProfileTargetsColumns = JAMF_Configuration_Profile_Target_Info_Empty
 		configProfileExclusionsColumns = JAMF_Configuration_Profile_Exclusion_Info_Empty
+	
+	
+	# Package to Policy Info fields
+	if get_JAMF_Package_To_Policy_Info == 'yes':
 		
+		# Regular columns
+		if includeRegularPackageToPolicyInfo == "yes":
+			
+			packageToRegularPolicyColumns = JAMF_Package_To_Regular_Policy_Info
+			packageUnusedColumns = JAMF_Package_Unused_Info	
+			
+		elif includeRegularPackageToPolicyInfo == "no":
+			
+			packageToRegularPolicyColumns = JAMF_Package_To_Regular_Policy_Info_Empty
+			packageUnusedColumns = JAMF_Package_Unused_Info_Empty
+		
+		#prestage columns
+		if includePreStagePackageToPolicyInfo == "yes":
+			
+			packageToPreStagePolicyColumns = JAMF_Package_To_PreStage_Policy_Info
+			packageUnusedColumns = JAMF_Package_Unused_Info
+			
+		elif includePreStagePackageToPolicyInfo == "no":
+			
+			packageToPreStagePolicyColumns = JAMF_Package_To_PreStage_Policy_Info_Empty
+			packageUnusedColumns = JAMF_Package_Unused_Info_Empty
+		
+			
 
 ##########################################################################################
 # Process Requested Info for Policies
@@ -2198,6 +2372,7 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 		myConfigurationProfileScopeExclusionsComputers = getConfigurationProfile['os_x_configuration_profile']['scope']['exclusions']['computers']
 		myConfigurationProfileScopeExclusionsComputerGroups = getConfigurationProfile['os_x_configuration_profile']['scope']['exclusions']['computer_groups']
 		
+		
 		##########################################################################################
 		# Process ConfigurationProfile information for csv / Excel
 		##########################################################################################
@@ -2429,13 +2604,554 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 				
 				#Set CSV File
 				dataToCsvConfigurationProfile.append(Combined)	
+
+	
+##########################################################################################
+# Package to Policies Section
+##########################################################################################			
+if get_JAMF_Package_To_Policy_Info == ("yes"):
+	
+	##########################################################################################
+	# Process Package to Policies information for csv / Excel
+	##########################################################################################
+	# Set up url for getting a list of all Package to Regular Policies from JAMF API
+	url = JAMF_url + "/JSSResource/policies"
+	
+	# Set up list
+	policyPackagesList = []
+	
+	try:
+		policyResponse = http.get(url, headers=btHeaders)
+		
+		policyResponse.raise_for_status()
+		
+		resp = policyResponse.json()
+		
+	except HTTPError as http_err:
+		print(f'HTTP error occurred: {http_err}')
+	except Exception as err:
+		print(f'Other error occurred: {err}')	
+		
+	#For Testing
+	#print(resp)
+		
+	policyRecords = resp['policies']
+	policyRecords.sort(key=lambda item: item.get('id'), reverse=False)
+
+
+	for policy in policyRecords:
+		
+		# Get Policy ID to do JAMF API lookup 
+		policyRecordsID = str(policy['id']) 
+		
+		#	For Testing
+		#print(policyRecordsID)
+		
+		# Set up url for getting information from each policy ID from JAMF API
+		url = JAMF_url + "/JSSResource/policies/id/" + policyRecordsID
+		
+		try:
+			PolicyRecordsResponse = http.get(url, headers=btHeaders)
+			
+			PolicyRecordsResponse.raise_for_status()
+			
+			getPolicyRecords = PolicyRecordsResponse.json()
+			
+		except HTTPError as http_err:
+			print(f'HTTP error occurred: {http_err}')
+		except Exception as err:
+			print(f'Other error occurred: {err}')
+			
+		# For Testing
+		#print(getPolicyRecords)
+			
+		#Get policy ID and Name for report
+		policyInfoID = getPolicyRecords['policy']['general']['id']
+		policyInfoName = getPolicyRecords['policy']['general']['name']
+		
+		# Find the package data in each policy
+		policyPackageInfo = getPolicyRecords['policy']['package_configuration']['packages']
+		
+		
+		# Individual Policy Info for each record
+		getMyPolicyIDList = (str(policyInfoID) + " - " + policyInfoName)
+		
+		# Get info for Policies
+		print("Gathering List for Package Info from Policy ID: " + getMyPolicyIDList)
+		
+		
+		#Get Package ID from Policy to compare and find unused packages.
+		for policyPackage in policyPackageInfo:
+			
+			#get package info for dict
+			policyPackagesDict = {'Policy ID': policyInfoID, 'Policy Name': policyInfoName, 'Package ID': str(policyPackage['id'])}
+			
+			policyPackagesList.append(policyPackagesDict)
+	
+	
+	#For testing
+	#print(policyPackagesList)	
+
+
+	if includePreStagePackageToPolicyInfo == ("yes"):
+		##########################################################################################
+		# Process Package to PreStage Policies information for csv / Excel
+		##########################################################################################
+		# Set up url for getting a list of all Package to PreStage Policies from JAMF API
+		PSURL = JAMF_url + "/api/v2/computer-prestages"
+		
+		preStagePolicyPackagesList = []
+		
+		try:
+			preStagePolicyPackagesResponse = http.get(PSURL, headers=btHeaders)
+			
+			preStagePolicyPackagesResponse.raise_for_status()
+			
+			resp = preStagePolicyPackagesResponse.json()
+			
+		except HTTPError as http_err:
+			print(f'HTTP error occurred: {http_err}')
+		except Exception as err:
+			print(f'Other error occurred: {err}')	
+			
+		#For Testing
+		#print(resp)
+		
+		preStagePolicies = resp['results']
+		
+		for results in preStagePolicies:
+			
+			preStagePoliciesID = results['id']
+			packages = results['customPackageIds']
+			preStagePoliciesDisplayName = results['displayName']
+			
+			
+			# Individual Policy Info for each record
+			getMyPreStagePolicyIDList = (str(preStagePoliciesID) + " - " + preStagePoliciesDisplayName)
+			
+			# Get info for Policies
+			print("Gathering List for Package Info from PreStage Policy ID: " + getMyPreStagePolicyIDList)
+			
+			
+			for package in packages:
 				
+				#print(package)
+				
+				preStagePolicyPackagesDict = {'PreStage Policy ID': preStagePoliciesID, 'PreStage Policy Display Name': preStagePoliciesDisplayName, 'Package ID': package}
+				
+				preStagePolicyPackagesList.append(preStagePolicyPackagesDict)
+				
+				
+		#print(preStagePolicyPackagesList)
+	
+
+	##########################################################################################
+	# lookup package information and compair to dict and list to find what is in use.
+	##########################################################################################
+	url = JAMF_url + "/JSSResource/packages"
+	
+	try:
+		packageResponse = http.get(url, headers=btHeaders)
+		
+		packageResponse.raise_for_status()
+		
+		resp = packageResponse.json()
+		
+	except HTTPError as http_err:
+		print(f'HTTP error occurred: {http_err}')
+	except Exception as err:
+		print(f'Other error occurred: {err}')	
+		
+	#For Testing
+	#print(resp)
+		
+	packageRecords = resp['packages']
+	packageRecords.sort(key=lambda item: item.get('id'), reverse=False)
+	
+	
+	#print(packageRecords)
+	
+	
+	#process package records and set dict and list
+	for package in packageRecords:
+		
+		packageRecordsID = package['id']
+		packageRecordsName = package['name']
+		
+		key = 'Package ID' 
+		value = str(packageRecordsID)
+		
+		# Individual Policy Info for each record
+		getMyPackageList = (str(packageRecordsID) + " - " + packageRecordsName)
+		
+		# Get info for Policies
+		print("Checking Policies that use Package: " + getMyPackageList) 
+		
+		#for testing
+		#print(packageRecordsID)
+		#print(policyPackagesList)
+		#print(type(value))
+		
+		
+		#Process Info for packages to policies
+		if checkIfPackageIsUsedInPolicy(preStagePolicyPackagesList, key, value) and checkIfPackageIsUsedInPolicy(policyPackagesList, key, value):
+			
+			for policy in policyPackagesList:
+				
+				policyPackageID = policy['Package ID']
+				
+				checkPolicyListID = str(policyPackageID)
+				checkPackageRecordsID = str(packageRecordsID)
+				
+				
+				if checkPolicyListID == checkPackageRecordsID:
+					
+					# Set up url for getting information from each policy ID from JAMF API
+					url = JAMF_url + "/JSSResource/packages/id/" + str(packageRecordsID)
+					
+					try:
+						myPackageRecordsResponse = http.get(url, headers=btHeaders)
+						
+						myPackageRecordsResponse.raise_for_status()
+						
+						getMyPackageRecords = myPackageRecordsResponse.json()
+						
+					except HTTPError as http_err:
+						print(f'HTTP error occurred: {http_err}')
+					except Exception as err:
+						print(f'Other error occurred: {err}')
+						
+					# for testing
+					#print(getMyPackageRecords['package']['id'])
+						
+						
+					#Set Variables if Data Available
+					if len(str(getMyPackageRecords['package']['id'])) == 0:
+						myCurrentPackageID = ''
+					else:
+						myCurrentPackageID = int(getMyPackageRecords['package']['id'])
+						
+					myCurrentPackageName =  getMyPackageRecords['package']['name']
+					myPackageRecordsFileName = getMyPackageRecords['package']['filename']
+					
+					if len(str(policy['Policy ID'])) == 0:
+						myCurrentPolicyID = ''
+					else:
+						myCurrentPolicyID = int(policy['Policy ID'])
+						
+					myCurrentPolicyName = policy['Policy Name']
+					
+					
+					appendDataToCVS_JAMF_Package_To_Regular_Policy_Info = "{'Type':'Package Used',\
+					\
+					'Package List':'Regular Policy',\
+					\
+					'Package ID':myCurrentPackageID,\
+					\
+					'Package Name':myCurrentPackageName,\
+					\
+					'Package File Name':myPackageRecordsFileName,\
+					\
+					'Policy ID':myCurrentPolicyID,\
+					\
+					'Policy Name':myCurrentPolicyName}"
+					
+					appendJAMF_Package_To_Regular_Policy_Info = eval(appendDataToCVS_JAMF_Package_To_Regular_Policy_Info)
+					appendPackageToRegularPolicyColumns = appendJAMF_Package_To_Regular_Policy_Info
+					
+					#Set Columns	
+					Combined = appendPackageToRegularPolicyColumns
+					
+					#Set CSV File
+					dataToCsvPackageToPolicy.append(Combined)
+					
+					# For Testing
+					#print(f"Yes, Package ID: " + myCurrentPackageID + " with Package Name: " + myCurrentPackageName + " and Package File Name: " + myPackageRecordsFileName + ", is being used by Policy ID: " + str(myCurrentPolicyID) + " with Policy Name: " + myCurrentPolicyName)
+			
+			
+			for preStagePolicy in preStagePolicyPackagesList:
+				
+				preStagePolicyPackageID = preStagePolicy['Package ID']
+				
+				checkPreStagePolicyListID = str(preStagePolicyPackageID)
+				checkPackageRecordsID = str(packageRecordsID)
+				
+				if checkPreStagePolicyListID == checkPackageRecordsID:
+					
+					# Set up url for getting information from each policy ID from JAMF API
+					url = JAMF_url + "/JSSResource/packages/id/" + str(packageRecordsID)
+					
+					try:
+						myPackageRecordsResponse = http.get(url, headers=headers, auth = HTTPBasicAuth('jamf-api', 'J@MF@P!acc3s$'))
+						
+						myPackageRecordsResponse.raise_for_status()
+						
+						getMyPackageRecords = myPackageRecordsResponse.json()
+						
+					except HTTPError as http_err:
+						print(f'HTTP error occurred: {http_err}')
+					except Exception as err:
+						print(f'Other error occurred: {err}')
+						
+						
+					#print(getMyPackageRecords['package']['id'])
+						
+						
+					#Set Variables if Data Available
+					if len(str(getMyPackageRecords['package']['id'])) == 0:
+						myCurrentPackageID = ''
+					else:
+						myCurrentPackageID = int(getMyPackageRecords['package']['id'])
+						
+					myCurrentPackageName =  getMyPackageRecords['package']['name']
+					myPackageRecordsFileName = getMyPackageRecords['package']['filename']
+					
+					if len(str(preStagePolicy['PreStage Policy ID'])) == 0:
+						myCurrentPreStagePolicyID = ''
+					else:
+						myCurrentPreStagePolicyID = int(preStagePolicy['PreStage Policy ID'])
+						
+					myCurrentPreStagePolicyName = preStagePolicy['PreStage Policy Display Name']
+					
+					
+					appendDataToCVS_JAMF_Package_To_PreStage_Policy_Info = "{'Type':'Package Used',\
+					\
+					'Package List':'PreStage Policy',\
+					\
+					'Package ID':myCurrentPackageID,\
+					\
+					'Package Name':myCurrentPackageName,\
+					\
+					'Package File Name':myPackageRecordsFileName,\
+					\
+					'PreStage Policy ID':myCurrentPreStagePolicyID,\
+					\
+					'PreStage Policy Name':myCurrentPreStagePolicyName}"
+					
+					
+					appendJAMF_Package_To_PreStage_Policy_Info = eval(appendDataToCVS_JAMF_Package_To_PreStage_Policy_Info)
+					appendPackageToPreStagePolicyColumns = appendJAMF_Package_To_PreStage_Policy_Info
+					
+					#Set Columns	
+					Combined = appendPackageToPreStagePolicyColumns
+					
+					#Set CSV File
+					dataToCsvPackageToPolicy.append(Combined)
+					
+					# For Testing
+					#print(f"Yes, Package ID: " + myCurrentPackageID + " with Package Name: " + myCurrentPackageName + " and Package FileName: "+ myPackageRecordsFileName + " is being used in PreStage Policies ID: " + myCurrentPreStagePolicyID + " with PreStage Display Name: " + myCurrentPreStagePolicyName)
+					
+			
+		elif checkIfPackageIsUsedInPolicy(policyPackagesList, key, value):
+			
+			for policy in policyPackagesList:
+				
+				policyPackageID = policy['Package ID']
+				
+				checkPolicyListID = str(policyPackageID)
+				checkPackageRecordsID = str(packageRecordsID)
+				
+				
+				if checkPolicyListID == checkPackageRecordsID:
+					
+					# Set up url for getting information from each policy ID from JAMF API
+					url = JAMF_url + "/JSSResource/packages/id/" + str(packageRecordsID)
+					
+					try:
+						myPackageRecordsResponse = http.get(url, headers=btHeaders)
+						
+						myPackageRecordsResponse.raise_for_status()
+						
+						getMyPackageRecords = myPackageRecordsResponse.json()
+						
+					except HTTPError as http_err:
+						print(f'HTTP error occurred: {http_err}')
+					except Exception as err:
+						print(f'Other error occurred: {err}')
+						
+					# for testing
+					#print(getMyPackageRecords['package']['id'])
+						
+						
+					#Set Variables if Data Available
+					if len(str(getMyPackageRecords['package']['id'])) == 0:
+						myCurrentPackageID = ''
+					else:
+						myCurrentPackageID = int(getMyPackageRecords['package']['id'])
+					
+					myCurrentPackageName =  getMyPackageRecords['package']['name']
+					myPackageRecordsFileName = getMyPackageRecords['package']['filename']
+					
+					if len(str(policy['Policy ID'])) == 0:
+						myCurrentPolicyID = ''
+					else:
+						myCurrentPolicyID = int(policy['Policy ID'])
+					
+					myCurrentPolicyName = policy['Policy Name']
+					
+					
+					appendDataToCVS_JAMF_Package_To_Regular_Policy_Info = "{'Type':'Package Used',\
+					\
+					'Package List':'Regular Policy',\
+					\
+					'Package ID':myCurrentPackageID,\
+					\
+					'Package Name':myCurrentPackageName,\
+					\
+					'Package File Name':myPackageRecordsFileName,\
+					\
+					'Policy ID':myCurrentPolicyID,\
+					\
+					'Policy Name':myCurrentPolicyName}"
+					
+					appendJAMF_Package_To_Regular_Policy_Info = eval(appendDataToCVS_JAMF_Package_To_Regular_Policy_Info)
+					appendPackageToRegularPolicyColumns = appendJAMF_Package_To_Regular_Policy_Info
+					
+					#Set Columns	
+					Combined = appendPackageToRegularPolicyColumns
+					
+					#Set CSV File
+					dataToCsvPackageToPolicy.append(Combined)
+					
+					# For Testing
+					#print(f"Yes, Package ID: " + myCurrentPackageID + " with Package Name: " + myCurrentPackageName + " and Package File Name: " + myPackageRecordsFileName + ", is being used by Policy ID: " + str(myCurrentPolicyID) + " with Policy Name: " + myCurrentPolicyName)
+					
+					
+		elif checkIfPackageIsUsedInPolicy(preStagePolicyPackagesList, key, value):
+			
+			for preStagePolicy in preStagePolicyPackagesList:
+				
+				preStagePolicyPackageID = preStagePolicy['Package ID']
+				
+				checkPreStagePolicyListID = str(preStagePolicyPackageID)
+				checkPackageRecordsID = str(packageRecordsID)
+				
+				if checkPreStagePolicyListID == checkPackageRecordsID:
+					
+					# Set up url for getting information from each policy ID from JAMF API
+					url = JAMF_url + "/JSSResource/packages/id/" + str(packageRecordsID)
+					
+					try:
+						myPackageRecordsResponse = http.get(url, headers=btHeaders)
+						
+						myPackageRecordsResponse.raise_for_status()
+						
+						getMyPackageRecords = myPackageRecordsResponse.json()
+						
+					except HTTPError as http_err:
+						print(f'HTTP error occurred: {http_err}')
+					except Exception as err:
+						print(f'Other error occurred: {err}')
+						
+						
+					#print(getMyPackageRecords['package']['id'])
+					#print(getMyPackageRecords) 
+						
+						
+					#Set Variables if Data Available
+					if len(str(getMyPackageRecords['package']['id'])) == 0:
+						myCurrentPackageID = ''
+					else:
+						myCurrentPackageID = int(getMyPackageRecords['package']['id'])
+						
+					myCurrentPackageName =  getMyPackageRecords['package']['name']
+					myPackageRecordsFileName = getMyPackageRecords['package']['filename']
+					
+					if len(str(preStagePolicy['PreStage Policy ID'])) == 0:
+						myCurrentPreStagePolicyID = ''
+					else:
+						myCurrentPreStagePolicyID = int(preStagePolicy['PreStage Policy ID'])
+						
+					myCurrentPreStagePolicyName = preStagePolicy['PreStage Policy Display Name']
+					
+					
+					appendDataToCVS_JAMF_Package_To_PreStage_Policy_Info = "{'Type':'Package Used',\
+					\
+					'Package List':'PreStage Policy',\
+					\
+					'Package ID':myCurrentPackageID,\
+					\
+					'Package Name':myCurrentPackageName,\
+					\
+					'Package File Name':myPackageRecordsFileName,\
+					\
+					'PreStage Policy ID':myCurrentPreStagePolicyID,\
+					\
+					'PreStage Policy Name':myCurrentPreStagePolicyName}"
+					
+					
+					appendJAMF_Package_To_PreStage_Policy_Info = eval(appendDataToCVS_JAMF_Package_To_PreStage_Policy_Info)
+					appendPackageToPreStagePolicyColumns = appendJAMF_Package_To_PreStage_Policy_Info
+					
+					#Set Columns	
+					Combined = appendPackageToPreStagePolicyColumns
+					
+					#Set CSV File
+					dataToCsvPackageToPolicy.append(Combined)
+					
+					# For Testing
+					#print(f"Yes, Package ID: " + myCurrentPackageID + " with Package Name: " + myCurrentPackageName + " and Package FileName: "+ myPackageRecordsFileName + " is being used in PreStage Policies ID: " + myCurrentPreStagePolicyID + " with PreStage Display Name: " + myCurrentPreStagePolicyName)
+			
+			
+		else:
+			
+			# Set up url for getting information from each policy ID from JAMF API
+			url = JAMF_url + "/JSSResource/packages/id/" + str(packageRecordsID)
+			
+			try:
+				myPackageRecordsResponse = http.get(url, headers=btHeaders)
+				
+				myPackageRecordsResponse.raise_for_status()
+				
+				getMyPackageRecords = myPackageRecordsResponse.json()
+				
+			except HTTPError as http_err:
+				print(f'HTTP error occurred: {http_err}')
+			except Exception as err:
+				print(f'Other error occurred: {err}')
+				
+			# for testing
+			#print(getMyPackageRecords['package']['id'])
+			
+			
+			#Set Variables if Data Available
+			if len(str(getMyPackageRecords['package']['id'])) == 0:
+				myUnusedCurrentPackageID = ''
+			else:
+				myUnusedCurrentPackageID = int(getMyPackageRecords['package']['id'])
+				
+			myUnusedPackageName =  getMyPackageRecords['package']['name']
+			myUnusedPackageRecordsFileName = getMyPackageRecords['package']['filename']
+			
+			
+			appendDataToCVS_JAMF_Package_Unused_Info = "{'Type':'Package Not Used',\
+			\
+			'Package List':'',\
+			\
+			'Package ID':myUnusedCurrentPackageID,\
+			\
+			'Package Name':myUnusedPackageName,\
+			\
+			'Package File Name':myUnusedPackageRecordsFileName}"
+			
+			
+			appendJAMF_Package_Unused_Info = eval(appendDataToCVS_JAMF_Package_Unused_Info)
+			appendPackageUnusedColumns = appendJAMF_Package_Unused_Info
+			
+			#Set Columns	
+			Combined = appendPackageUnusedColumns
+			
+			#Set CSV File
+			dataToCsvPackageToPolicy.append(Combined)
+			
+			#print(f"No, Package ID: " + str(packageRecordsID) + ", Package Name: " + packageRecordsName + " is not being used in any Policies")
+			
 
 ##########################################################################################
 # Process data for Export to csv / Excel
 ##########################################################################################
 # Check and make sure that either Policy or Config Profile was selected
-if get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes' or get_JAMF_Computers_Info == 'yes':
+if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes' or get_JAMF_Package_To_Policy_Info == 'yes':
 	
 	# Get export to csv file
 	if get_JAMF_Computers_Info == ("yes"):
@@ -2446,6 +3162,9 @@ if get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes'
 		
 	if get_JAMF_Configuration_Profile_Info == ("yes"):	
 		df_configProfile = pd.DataFrame(dataToCsvConfigurationProfile)
+		
+	if get_JAMF_Package_To_Policy_Info == ("yes"):	
+		df_PackageToPolicy = pd.DataFrame(dataToCsvPackageToPolicy)
 
 	
 	print('\n******************** Creating Jamf Instance Info file. ********************\n')
@@ -2462,6 +3181,9 @@ if get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes'
 	
 	if get_JAMF_Configuration_Profile_Info == ("yes"):
 		df_configProfile.to_excel(Excelwriter, sheet_name='Jamf Configuration Profile Info')
+		
+	if get_JAMF_Package_To_Policy_Info == ("yes"):
+		df_PackageToPolicy.to_excel(Excelwriter, sheet_name='Jamf Packages To Policy Info')
 	
 	#And finally we save the file
 	Excelwriter.save()
