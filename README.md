@@ -125,6 +125,33 @@
 
 
 
+### Package to Policy lookup
+
+		Provides the following:
+		
+		Package used or Package Not Used
+		in Policies
+	
+		Which Policy Package is used in. Policies
+		or PreStage Policies
+		
+		Package ID
+	
+		Package Name
+	
+		Package File Name
+	
+		Policy ID if used in a Policy
+	
+		Policy Name if used in Policy
+	
+		PreStage Policy ID if used 
+		in PreStage Policy
+	
+		PreStage Policy Name if used 
+		in PreStage Policy	
+
+
 ## 	How to run
 		Have python3 on your device. Run the script. Enter the information at the prompts.
 		Dependancies will be automatically installed. Enjoy!!!
