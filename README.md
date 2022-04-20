@@ -1,6 +1,6 @@
 # JAMF-API-Get_Data_From-JAMF_Desplay_in_Excel
 	
-### This script runs api calls to get information on Policies, Scripts in Policies, Packages in Policies, Scope in policies, Configuration Profiles, and Scopes in Configuration profiles and save the information in a xlsx document for working with in Excel or similar. 
+### This script runs api calls to get information on Policies, Scripts in Policies, Packages in Policies, Scope in policies, Configuration Profiles, Scopes in Configuration profiles, and Package to Policy It saves the information in a xlsx document for working with in Excel or similar. 
 		
 ### The Script runs on Python 3 and uses the Libraries "Requests", "Pandas", "openpyxl", and "xlsxwriter". There is a check built in so as long as you have Python3 installed, the other libraries will be installed automatically with pip3.
 
@@ -159,11 +159,15 @@
 		The only requirement is that you have Python3 on the device. All other libraries
 		the script will look for them and download if they are not found.
 		
-		Run from terminal and answer the 3 fields. URL, API Username, API Password.
-		You can also send command line args to the script
+		Run from terminal and answer the 3 fields to connect to your JAMF Instance.
+		URL, API Username, API Password.
+		You can also send command line args to the script for this information to connect.
 		For Example : yourScript.py "URL" "API Username" "API Password"
 		
 		You also get the option to select the path and filename for your xlsx file.
+		
+		You can configure the Yes / No options for each of the Excel Sheets and
+		use any part of the information on the report making it smaller or using everything.
 		
 		In the Computers section you have the option of running the report with a
 		smart group is or on the whole instance.
