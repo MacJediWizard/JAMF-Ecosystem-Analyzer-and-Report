@@ -2464,7 +2464,7 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 				\
 				'Configuration Profile Category Name':formatMyConfigurationProfileGeneralCatagory,\
 				\
-				'Configuration Profile Target Computer ID':computerID,\
+				'Configuration Profile Target Computer ID':computer['id'],\
 				\
 				'Configuration Profile Target Computer Name':computer['name']}"
 				
@@ -2476,7 +2476,7 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 				
 				#Set CSV File
 				dataToCsvConfigurationProfile.append(Combined)	
-				
+			
 			
 			##########################################################################################
 			# Get Info for Target Computer Groups
