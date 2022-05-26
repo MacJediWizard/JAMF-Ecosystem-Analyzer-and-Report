@@ -11,6 +11,8 @@
 #	Version 3.0 - Adding Bearer Token Auth for requests
 #	Version 4.0 - Adding Package to policy / Prestage Policy lookup for unused packages.
 #	Version 5.0 - Adding Computer Group Membership to Computers Sheet in report
+#	Version 6.0 - Adding Results filter for Computer Record Sheet to filter by 
+#				  computer, smart group, or none.
 #
 #	This script take User Imput and will call the JAMF API and get all Information 
 #	related to a Policy, Configuration Profile, and Computers.

@@ -11,7 +11,7 @@
 
 ###	Computer Info
 
-		if you are usingSmartGroup
+		if you are using Filter for SmartGroup
 		
 			Computer SmartGroup ID
 			
@@ -25,7 +25,7 @@
 			
 			Computer Serial Number
 		
-		If you are not usingSmartGroup
+		If you are not using Filter or just one computer
 		
 			Computer Record Type
 			
@@ -60,6 +60,13 @@
 		Computer Local Account is Admin
 		
 		Computer Local Account in LDAP
+		
+		
+		Computer Group Membership Group ID
+		
+		Computer Group Membership Group Name
+		
+		Computer Group Membership Group Is Smart
 
 
 	
@@ -170,7 +177,11 @@
 		use any part of the information on the report making it smaller or using everything.
 		
 		In the Computers section you have the option of running the report with a
-		smart group is or on the whole instance.
+		results filter for a single computer, smart group, or on the whole instance.
+		
+		PLEASE NOTE: The more computers you have the longer the report takes to find all
+		group memberships the computer belongs to.
+		
 		
 		When looking up local accounts from the computers section, you can do an LDAP
 		check to see what accounts are in LDAP. Great for when you use a JIM server.
