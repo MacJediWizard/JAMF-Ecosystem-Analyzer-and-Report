@@ -10,6 +10,7 @@
 #	Version 2.0 - Adding Computer fields and sheets to report
 #	Version 3.0 - Adding Bearer Token Auth for requests
 #	Version 4.0 - Adding Package to policy / Prestage Policy lookup for unused packages.
+#	Version 5.0 - Adding Computer Group Membership to Computers Sheet in report
 #
 #	This script take User Imput and will call the JAMF API and get all Information 
 #	related to a Policy, Configuration Profile, and Computers.
@@ -84,7 +85,7 @@
 ##################################################
 #	Computer Record Type
 ##################################################
-#	if you are usingSmartGroup
+#	if you are usingFilter for SmartGroup
 #
 #		Computer SmartGroup ID
 #
@@ -98,7 +99,7 @@
 #
 #		Computer Serial Number
 #
-#	If you are not usingSmartGroup
+#	If you are not usingFilter or just single computer
 #
 #		Computer Record Type
 #
@@ -133,6 +134,13 @@
 #	Computer Local Account is Admin
 #
 #	Computer Local Account in LDAP
+#
+#
+#	Computer Group Membership Group ID
+#
+#	Computer Group Membership Group Name
+#
+#	Computer Group Membership Group Is Smart
 #
 #
 ##################################################
@@ -375,8 +383,8 @@ def getYesOrNoInput(prompt):
 
 
 #Merge Dictionaries
-def MergeComputersInfo(dict1, dict2, dict3, dict4):
-	result = dict1 | dict2 | dict3 | dict4
+def MergeComputersInfo(dict1, dict2, dict3, dict4, dict5):
+	result = dict1 | dict2 | dict3 | dict4 | dict5
 	return result
 
 
@@ -632,26 +640,48 @@ if get_JAMF_Computers_Info == ("yes"):
 	
 	
 	#Get Smart Group ID if needed
-	print("\n******************** JAMF API Computer Info Smart Group Section. ********************\n")
-	get_JAMF_Computers_Info_SmartGroup = getYesOrNoInput("Do you want to use a JAMF Smart Group for the Computer Report Info? (yes or no): ")
+	print("\n******************** JAMF API Computer Info Results Filter Section. ********************\n")
+	print("\n\nPlease choose how you would like the results returned in your report. It is recommended to use a smart group id or computer id for this report for quickest results.\n")
+	print("\nPlease Note if you choose all computers the report may take some time to complete depending on the number of computers in your JAMF system.")
+	#get_JAMF_Computers_Info_SmartGroup = getYesOrNoInput("Do you want to use a JAMF Smart Group for the Computer Report Info? (yes or no): ")
 	
-	if get_JAMF_Computers_Info_SmartGroup == 'yes':
+	# Set options for results filter for this section and question
+	myResultsFilterLabel = "Your results filter choices are:"
+	mymyResultsFilterOptions = ["Filter results for 1 Computer ID", "Filter results By Smart Group ID", "No Filter, Return All Computers"]
+	
+	# Get choice from user
+	get_JAMF_Computers_Info_Results_Filter = let_user_pick(myResultsFilterLabel, mymyResultsFilterOptions)
+	
+	get_JAMF_Computers_Info_Results_Filter_Choice = (mymyResultsFilterOptions[get_JAMF_Computers_Info_Results_Filter])
+	
+	#Return choice and set filter
+	if get_JAMF_Computers_Info_Results_Filter_Choice == 'Filter results for 1 Computer ID':
 		
-		print("\nUsing JAMF Smart Group for the Computer Report.\n\n")
+		print("\nUsing JAMF Computer ID to filter the Computer Report for 1 Computer Record.\n\n")
+		computerIDLabel = "Enter your JAMF Computer ID Number: "
+		get_JAMF_Computer_ID = checkInputForNumber(computerIDLabel)
+		print("\n")
+		JAMF_Computer_ID = get_JAMF_Computer_ID
+		usingFilter = "computerFilter"
+		
+		
+	elif get_JAMF_Computers_Info_Results_Filter_Choice == 'Filter results By Smart Group ID':
+		
+		print("\nUsing JAMF Smart Group to filter the Computer Report for 1 Computer Smart Group.\n\n")
 		smartGroupIDLabel = "Enter your JAMF SmartGroup ID Number: "
 		get_JAMF_SmartGroup_ID = checkInputForNumber(smartGroupIDLabel)
 		print("\n")
 		JAMF_SmartGroup_ID = get_JAMF_SmartGroup_ID
-		usingSmartGroup = "yes"
+		usingFilter = "smartGroupFilter"
 		
 		
-	elif get_JAMF_Computers_Info_SmartGroup == ("no"):
+	elif get_JAMF_Computers_Info_Results_Filter_Choice == 'No Filter, Return All Computers':
 		
-		print("\nNot using JAMF Smart Group for the Computer Report.\n\n")
-		usingSmartGroup = "no"
+		print("\nNot using JAMF Results Filter for the Computer Report.\n\n")
+		usingFilter = "noFilter"
 	
 	
-	#Get Policy Self Service Elements
+	#Get hardware Elements
 	print("\n******************** JAMF API Computer Info Hardware Section. ********************\n")
 	get_JAMF_Computers_Info_Hardware = getYesOrNoInput("Do you want to include JAMF Computer Hardware Info in Report? (yes or no): ")
 	if get_JAMF_Computers_Info_Hardware == ("yes"):
@@ -742,13 +772,30 @@ if get_JAMF_Computers_Info == ("yes"):
 		print("\nNot including Local Account Info Data.\n\n")
 		includeLocalAccountInfo = "no"
 
+	
+	#Get Group Membership
+	print("\n******************** JAMF API Computer Info Computer Group Membership Section. ********************\n")
+	get_JAMF_Computers_Info_Computer_Group_Membership = getYesOrNoInput("Do you want to include JAMF Computer Hardware Computer Group Membership Info in Report? (yes or no): ")
+	if get_JAMF_Computers_Info_Computer_Group_Membership == ("yes"):
+		
+		print("\nIncluding Computer Group Membership Info Data.\n\n")		
+		includeComputerGroupMembershipInfo = "yes"
+		
+	elif get_JAMF_Computers_Info_Computer_Group_Membership == ("no"):
+		
+		print("\nNot including Computer Group Membership Info Data.\n\n")
+		includeComputerGroupMembershipInfo = "no"
+
+
 elif get_JAMF_Computers_Info == ("no"):
 	
 	includeComputerInfo = "no"
-	usingSmartGroup = "no"
+	usingFilter = "noFilter"
 	includeHardwareInfo = "no"
 	includeFileVault2Info = "no"
 	includeLocalAccountInfo = "no"
+	includeComputerGroupMembershipInfo = "no"
+	
 
 ##################################################
 # Get Jamf Policy Info
@@ -936,7 +983,17 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	##################################################
 	# Set Variables for Dict for Computers Info
 	##################################################
-	if usingSmartGroup == 'yes':
+	if usingFilter == 'computerFilter':
+		
+		dataToCVS_JAMF_Computers_Info = "{'Type':'',\
+		\
+		'Computer ID':'',\
+		\
+		'Computer Name':'',\
+		\
+		'Computer Serial Number':''}"
+		
+	elif usingFilter == 'smartGroupFilter':
 		
 		dataToCVS_JAMF_Computers_Info = "{'Computer SmartGroup ID':'',\
 		\
@@ -950,7 +1007,7 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 		\
 		'Computer Serial Number':''}"
 		
-	elif usingSmartGroup == 'no':
+	elif usingFilter == 'noFilter':
 		
 		dataToCVS_JAMF_Computers_Info = "{'Type':'',\
 		\
@@ -986,6 +1043,13 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	'Computer Local Account is Admin ':'',\
 	\
 	'Computer Local Account in LDAP ':''}"	
+
+	
+	dataToCVS_JAMF_Computers_Info_Computer_Group_Membership = "{'Computer Group Membership Group ID':'',\
+	\
+	'Computer Group Membership Group Name':'',\
+	\
+	'Computer Group Membership Group Is Smart':''}"
 	
 	
 	##################################################
@@ -1132,7 +1196,17 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	##################################################
 	# Set Variables for Dict for Computers Info to empty
 	##################################################
-	if usingSmartGroup == 'yes':
+	if usingFilter == 'computerFilter':
+		
+		dataToCVS_JAMF_Computers_Info_Empty = "{'Type':'',\
+		\
+		'Computer ID':'',\
+		\
+		'Computer Name':'',\
+		\
+		'Computer Serial Number':''}"
+		
+	elif usingFilter == 'smartGroupFilter':
 		
 		dataToCVS_JAMF_Computers_Info_Empty = "{'Computer SmartGroup ID':'',\
 		\
@@ -1146,7 +1220,7 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 		\
 		'Computer Serial Number':''}"
 		
-	elif usingSmartGroup == 'no':
+	elif usingFilter == 'noFilter':
 		
 		dataToCVS_JAMF_Computers_Info_Empty = "{'Type':'',\
 		\
@@ -1155,6 +1229,7 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 		'Computer Name':'',\
 		\
 		'Computer Serial Number':''}"
+		
 		
 
 	dataToCVS_JAMF_Computers_Hardware_Info_Empty = "{'Computer Make':'',\
@@ -1182,6 +1257,13 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	'Computer Local Account is Admin ':'',\
 	\
 	'Computer Local Account in LDAP ':''}"
+	
+	
+	dataToCVS_JAMF_Computers_Info_Computer_Group_Membership_Empty = "{'Computer Group Membership Group ID':'',\
+	\
+	'Computer Group Membership Group Name':'',\
+	\
+	'Computer Group Membership Group Is Smart':''}"
 	
 	
 	##################################################
@@ -1333,6 +1415,7 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	JAMF_Computers_Hardware_Info = eval(dataToCVS_JAMF_Computers_Hardware_Info)
 	JAMF_Computers_FileVault2_Info = eval(dataToCVS_JAMF_Computers_FileVault2_Info)
 	JAMF_Computers_Local_Account_Info = eval(dataToCVS_JAMF_Computers_Local_Account_Info)
+	JAMF_Computers_Info_Computer_Group_Membership = eval(dataToCVS_JAMF_Computers_Info_Computer_Group_Membership)
 	
 	# Policy Info
 	JAMF_Policy_Info = eval(dataToCVS_JAMF_Policy_Info)
@@ -1361,6 +1444,7 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	JAMF_Computers_Hardware_Info_Empty = eval(dataToCVS_JAMF_Computers_Hardware_Info_Empty)
 	JAMF_Computers_FileVault2_Info_Empty = eval(dataToCVS_JAMF_Computers_FileVault2_Info_Empty)
 	JAMF_Computers_Local_Account_Info_Empty = eval(dataToCVS_JAMF_Computers_Local_Account_Info_Empty)
+	JAMF_Computers_Info_Computer_Group_Membership_Empty = eval(dataToCVS_JAMF_Computers_Info_Computer_Group_Membership_Empty)
 	
 	# Policy Info
 	JAMF_Policy_Info_Empty = eval(dataToCVS_JAMF_Policy_Info_Empty)
@@ -1418,12 +1502,23 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 			
 			LocalAccountColumns = JAMF_Computers_Local_Account_Info_Empty
 			
+			
+		if includeComputerGroupMembershipInfo == 'yes':
+			
+			computerGroupMembershipColumns = JAMF_Computers_Info_Computer_Group_Membership
+			
+		elif includeComputerGroupMembershipInfo == 'no':
+			
+			computerGroupMembershipColumns = JAMF_Computers_Info_Computer_Group_Membership_Empty
+			
+			
 	elif get_JAMF_Computers_Info == "no":
 		
 		computerColumns = JAMF_Computers_Info_Empty
 		hardwareColumns = JAMF_Computers_Hardware_Info_Empty
 		FileVault2Columns = JAMF_Computers_FileVault2_Info_Empty
 		LocalAccountColumns = JAMF_Computers_Local_Account_Info_Empty
+		computerGroupMembershipColumns = JAMF_Computers_Info_Computer_Group_Membership_Empty
 						
 	
 	# Policy Fields
@@ -1553,7 +1648,7 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 			
 
 ##########################################################################################
-# Process Requested Info for Policies
+# Process Requested Info for Sheets
 ##########################################################################################			
 if get_JAMF_Computers_Info == ("yes"):
 	
@@ -1561,11 +1656,15 @@ if get_JAMF_Computers_Info == ("yes"):
 	# Process Computers information for csv / Excel
 	##########################################################################################
 	# Set up url for getting a list of all Computers from JAMF API
-	if usingSmartGroup == 'yes':
+	if usingFilter == 'computerFilter':
+		
+		url = JAMF_url + "/JSSResource/computers/id/" + JAMF_Computer_ID
+		
+	elif usingFilter == 'smartGroupFilter':
 		
 		url = JAMF_url + "/JSSResource/computergroups/id/" + JAMF_SmartGroup_ID
 		
-	elif usingSmartGroup == 'no':
+	elif usingFilter == 'noFilter':
 		
 		url = JAMF_url + "/JSSResource/computers"
 	
@@ -1584,7 +1683,13 @@ if get_JAMF_Computers_Info == ("yes"):
 	# For Testing
 	#print(response.json())
 	
-	if usingSmartGroup == 'yes':
+	#Choose filter for records
+	if usingFilter == 'computerFilter':
+		
+		computerRecords = resp['computer']['general']
+		
+		
+	elif usingFilter == 'smartGroupFilter':
 		
 		computerRecords = resp['computer_group']['computers']
 		computerRecords.sort(key=lambda item: item.get('id'), reverse=False)
@@ -1598,17 +1703,18 @@ if get_JAMF_Computers_Info == ("yes"):
 		else:
 			smartGroupRecordID = int(smartGroupRecords['id'])
 		
-	elif usingSmartGroup == 'no':
+	elif usingFilter == 'noFilter':
 		
 		computerRecords = resp['computers']
 		computerRecords.sort(key=lambda item: item.get('id'), reverse=False)
 	
 	
 	# Process Computers List and get information linked to Computers
-	for computerRecord in computerRecords:
+	if usingFilter == 'computerFilter':
 		
-		# Get configurationProfile ID to do JAMF API lookup
-		computerRecordID = str(computerRecord['id']) 
+		#run for single computer
+		# Get ID to do JAMF API lookup
+		computerRecordID = str(computerRecords['id'])
 		
 		#For Testing
 		#print(computerRecordID)
@@ -1628,15 +1734,16 @@ if get_JAMF_Computers_Info == ("yes"):
 		except Exception as err:
 			print(f'Other error occurred: {err}')
 			
-		
+			
 		# For Testing
 		#print(computerRecordProfile)
-		
+			
 		#General Element for ID and Catagory
 		mycomputerRecordGeneral = computerRecordProfile['computer']['general']
 		mycomputerRecordHardware = computerRecordProfile['computer']['hardware']
 		mycomputerRecordHardwareFileVault2Users = computerRecordProfile['computer']['hardware']['filevault2_users']
 		mycomputerRecordHardwareLocalAccounts = computerRecordProfile['computer']['groups_accounts']['local_accounts']
+		mycomputerRecordComputerGroupMembership = computerRecordProfile['computer']['groups_accounts']['computer_group_memberships']
 		
 		
 		##########################################################################################
@@ -1654,9 +1761,19 @@ if get_JAMF_Computers_Info == ("yes"):
 		else:
 			mycomputerRecordGeneralID = int(mycomputerRecordGeneral['id'])
 			
-	
+			
 		# Set Variables for Dict for Computers Info
-		if usingSmartGroup == 'yes':
+		if usingFilter == 'computerFilter':
+			
+			appendDataToCVS_JAMF_Computers_Info = "{'Type':'Computer Info',\
+			\
+			'Computer ID':mycomputerRecordGeneralID,\
+			\
+			'Computer Name':mycomputerRecordGeneral['name'],\
+			\
+			'Computer Serial Number':str(mycomputerRecordGeneral['serial_number'])}"
+			
+		elif usingFilter == 'smartGroupFilter':
 			
 			appendDataToCVS_JAMF_Computers_Info = "{'Computer SmartGroup ID':smartGroupRecordID,\
 			\
@@ -1670,7 +1787,7 @@ if get_JAMF_Computers_Info == ("yes"):
 			\
 			'Computer Serial Number':str(mycomputerRecordGeneral['serial_number'])}"
 			
-		elif usingSmartGroup == 'no':
+		elif usingFilter == 'noFilter':
 			
 			appendDataToCVS_JAMF_Computers_Info = "{'Type':'Computer Info',\
 			\
@@ -1685,7 +1802,7 @@ if get_JAMF_Computers_Info == ("yes"):
 		appendComputerColumns = appendJAMF_Computers_Info
 		
 		#Set Columns	
-		Combined = MergeComputersInfo(appendComputerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns)
+		Combined = MergeComputersInfo(appendComputerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns)
 		
 		#Set CSV File
 		dataToCsvComputers.append(Combined)	
@@ -1719,12 +1836,12 @@ if get_JAMF_Computers_Info == ("yes"):
 			appendComputerHardwareColumns = appendJAMF_Computers_Hardware_Info
 			
 			#Set Columns	
-			Combined = MergeComputersInfo(computerColumns, appendComputerHardwareColumns, FileVault2Columns, LocalAccountColumns)
+			Combined = MergeComputersInfo(computerColumns, appendComputerHardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns)
 			
 			#Set CSV File
 			dataToCsvComputers.append(Combined)	
-				
-		
+			
+			
 		if get_JAMF_Computers_Info_FileVault2_Users == ("yes"):
 			##########################################################################################		
 			# Get info for FileVautl2	
@@ -1743,12 +1860,12 @@ if get_JAMF_Computers_Info == ("yes"):
 				appendComputerFileVault2Columns = appendJAMF_Computers_FileVault2_Info
 				
 				#Set Columns	
-				Combined = MergeComputersInfo(computerColumns, hardwareColumns, appendComputerFileVault2Columns, LocalAccountColumns)
+				Combined = MergeComputersInfo(computerColumns, hardwareColumns, appendComputerFileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns)
 				
 				#Set CSV File
 				dataToCsvComputers.append(Combined)	
-		
-			
+				
+				
 		if get_JAMF_Computers_Info_Local_Account == ("yes"):
 			##########################################################################################		
 			# Get info for Local Accounts	
@@ -1796,10 +1913,10 @@ if get_JAMF_Computers_Info == ("yes"):
 							except Exception as err:
 								print(f'Other error occurred: {err}')
 								
-							
+								
 							# For Testing
 							#print(verifyLocalAccount)
-							
+								
 							verifidLocalAccountRecords = verifyLocalAccount['ldap_users']
 							verifidLocalAccountRecords.sort(key=lambda item: item.get('id'), reverse=False)
 							
@@ -1813,14 +1930,14 @@ if get_JAMF_Computers_Info == ("yes"):
 								else:
 									computerLocalAccountUID = int(localAccountRecord['uid'])
 									
-								
+									
 								computerInInLDAP = "true"
 								
 								
 								#print(computerRecordID, compd']
 								computerInInLDAP = "true"
 								
-					
+								
 						appendDataToCVS_JAMF_Computers_Local_Account_Info = "{'Type':'Computer Hardware Local Account Info',\
 						\
 						'Computer ID':mycomputerRecordGeneralID,\
@@ -1836,16 +1953,434 @@ if get_JAMF_Computers_Info == ("yes"):
 						'Computer Local Account is Admin ':computerLocalAccountIsAdmin,\
 						\
 						'Computer Local Account in LDAP ':computerInInLDAP}"
-					
+						
 						
 						appendJAMF_Computers_Local_Account_Info = eval(appendDataToCVS_JAMF_Computers_Local_Account_Info)
 						appendLocalAccountColumns = appendJAMF_Computers_Local_Account_Info
-					
+						
 						#Set Columns	
-						Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, appendLocalAccountColumns)
-					
+						Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, appendLocalAccountColumns, computerGroupMembershipColumns)
+						
 						#Set CSV File
 						dataToCsvComputers.append(Combined)	
+						
+						
+		if get_JAMF_Computers_Info_Computer_Group_Membership == 'yes':
+			##########################################################################################		
+			# Get info for Computer Group Membership	
+			##########################################################################################
+			#Get Info from record
+			computerGroupMembershipRecords = mycomputerRecordComputerGroupMembership
+			
+			#Get Computer Group Info
+			for group in computerGroupMembershipRecords:
+				
+				#Renew token because the report is a long process
+				#renew token
+				url = "https://iqvia.jamfcloud.com/api/v1/auth/keep-alive"
+				
+				token = http.post(url, headers=btHeaders)
+				
+				bearer = token.json()['token']
+				
+				btHeaders = {
+					'Accept': 'application/json',
+					'Authorization': 'Bearer '+bearer
+				}
+				
+				
+				#only need group name for list
+				computerGroupMembershipName = group
+				
+				#do look up for each name interation
+				# Lookup group info by computer id
+				url = JAMF_url + "/JSSResource/computergroups/name/" + computerGroupMembershipName
+				
+				
+				try:
+					computerGroupMembershipNameResponse = http.get(url, headers=btHeaders)
+					
+					computerGroupMembershipNameResponse.raise_for_status()
+					
+					resp = computerGroupMembershipNameResponse.json()
+					
+				except HTTPError as http_err:
+					print(f'HTTP error occurred: {http_err}')
+				except Exception as err:
+					print(f'Other error occurred: {err}')	
+					
+				#For Testing
+				#print(resp)
+					
+				#Set Variables if Data Available
+				if len(str(resp['computer_group']['id'])) == 0:
+					mygroupMembershipId = ''
+				else:
+					mygroupMembershipId = int(resp['computer_group']['id'])	
+					
+					
+				groupMembershipName = resp['computer_group']['name']
+				groupMembershipIsSmart = resp['computer_group']['is_smart']
+				
+				
+				appendDataToCVS_JAMF_Computers_Info_Computer_Group_Membership = "{'Type':'Computer Group Membership Info',\
+				\
+				'Computer ID':mycomputerRecordGeneralID,\
+				\
+				'Computer Name':mycomputerRecordGeneral['name'],\
+				\
+				'Computer Group Membership Group ID':mygroupMembershipId,\
+				\
+				'Computer Group Membership Group Name':groupMembershipName,\
+				\
+				'Computer Group Membership Group Is Smart':groupMembershipIsSmart}"
+				
+				
+				appendJAMF_Computers_Info_Computer_Group_Membership = eval(appendDataToCVS_JAMF_Computers_Info_Computer_Group_Membership)
+				appendComputerGroupMembershipColumns = appendJAMF_Computers_Info_Computer_Group_Membership
+				
+				#Set Columns	
+				Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, appendComputerGroupMembershipColumns)
+				
+				#Set CSV File
+				dataToCsvComputers.append(Combined)
+		
+	else:		
+		
+		#Run for smart group on no filter
+		for computerRecord in computerRecords:
+			
+			# Get ID to do JAMF API lookup
+			computerRecordID = str(computerRecord['id'])
+			
+			#For Testing
+			#print(computerRecordID)
+			
+			# Set up url for getting information from each configurationProfile ID from JAMF API
+			url = JAMF_url + "/JSSResource/computers/id/" + computerRecordID
+			
+			try:
+				response = http.get(url, headers=btHeaders)
+				
+				response.raise_for_status()
+				
+				computerRecordProfile = response.json()
+				
+			except HTTPError as http_err:
+				print(f'HTTP error occurred: {http_err}')
+			except Exception as err:
+				print(f'Other error occurred: {err}')
+				
+			
+			# For Testing
+			#print(computerRecordProfile)
+			
+			#General Element for ID and Catagory
+			mycomputerRecordGeneral = computerRecordProfile['computer']['general']
+			mycomputerRecordHardware = computerRecordProfile['computer']['hardware']
+			mycomputerRecordHardwareFileVault2Users = computerRecordProfile['computer']['hardware']['filevault2_users']
+			mycomputerRecordHardwareLocalAccounts = computerRecordProfile['computer']['groups_accounts']['local_accounts']
+			mycomputerRecordComputerGroupMembership = computerRecordProfile['computer']['groups_accounts']['computer_group_memberships']
+			
+			
+			##########################################################################################
+			# Process ConfigurationProfile information for csv / Excel
+			##########################################################################################
+			# Individual Computers Info for each record
+			getMycomputerRecordGeneralID = (str(mycomputerRecordGeneral['id']) + " - " + mycomputerRecordGeneral['name'])
+			
+			# Get info for Policies
+			print("Working on Computer ID: " + getMycomputerRecordGeneralID)
+			
+			#Set Variables if Data Available
+			if len(str(mycomputerRecordGeneral['id'])) == 0:
+				mycomputerRecordGeneralID = ''
+			else:
+				mycomputerRecordGeneralID = int(mycomputerRecordGeneral['id'])
+				
+		
+			# Set Variables for Dict for Computers Info
+			if usingFilter == 'computerFilter':
+				
+				appendDataToCVS_JAMF_Computers_Info = "{'Type':'Computer Info',\
+				\
+				'Computer ID':mycomputerRecordGeneralID,\
+				\
+				'Computer Name':mycomputerRecordGeneral['name'],\
+				\
+				'Computer Serial Number':str(mycomputerRecordGeneral['serial_number'])}"
+				
+			elif usingFilter == 'smartGroupFilter':
+				
+				appendDataToCVS_JAMF_Computers_Info = "{'Computer SmartGroup ID':smartGroupRecordID,\
+				\
+				'Computer SmartGroup Name':smartGroupRecordName,\
+				\
+				'Type':'Computer Info',\
+				\
+				'Computer ID':mycomputerRecordGeneralID,\
+				\
+				'Computer Name':mycomputerRecordGeneral['name'],\
+				\
+				'Computer Serial Number':str(mycomputerRecordGeneral['serial_number'])}"
+				
+			elif usingFilter == 'noFilter':
+				
+				appendDataToCVS_JAMF_Computers_Info = "{'Type':'Computer Info',\
+				\
+				'Computer ID':mycomputerRecordGeneralID,\
+				\
+				'Computer Name':mycomputerRecordGeneral['name'],\
+				\
+				'Computer Serial Number':str(mycomputerRecordGeneral['serial_number'])}"
+				
+				
+			appendJAMF_Computers_Info = eval(appendDataToCVS_JAMF_Computers_Info)
+			appendComputerColumns = appendJAMF_Computers_Info
+			
+			#Set Columns	
+			Combined = MergeComputersInfo(appendComputerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns)
+			
+			#Set CSV File
+			dataToCsvComputers.append(Combined)	
+			
+			
+			if get_JAMF_Computers_Info_Hardware == ("yes"):
+				##########################################################################################		
+				# Get info for Hardware	
+				##########################################################################################
+				formatMyComputerRecordHardwareOSBuild = f"\"{mycomputerRecordHardware['os_build']}\""
+				
+				appendDataToCVS_JAMF_Computers_Hardware_Info = "{'Type':'Computer Hardware Info',\
+				\
+				'Computer ID':mycomputerRecordGeneralID,\
+				\
+				'Computer Name':mycomputerRecordGeneral['name'],\
+				\
+				'Computer Make':mycomputerRecordHardware['make'],\
+				\
+				'Computer Model':mycomputerRecordHardware['model'],\
+				\
+				'Computer Model Identifier':mycomputerRecordHardware['model_identifier'],\
+				\
+				'Computer OS Name':mycomputerRecordHardware['os_name'],\
+				\
+				'Computer OS Version':str(mycomputerRecordHardware['os_version']),\
+				\
+				'Computer OS Build':formatMyComputerRecordHardwareOSBuild}"	
+				
+				appendJAMF_Computers_Hardware_Info = eval(appendDataToCVS_JAMF_Computers_Hardware_Info)
+				appendComputerHardwareColumns = appendJAMF_Computers_Hardware_Info
+				
+				#Set Columns	
+				Combined = MergeComputersInfo(computerColumns, appendComputerHardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns)
+				
+				#Set CSV File
+				dataToCsvComputers.append(Combined)	
+					
+			
+			if get_JAMF_Computers_Info_FileVault2_Users == ("yes"):
+				##########################################################################################		
+				# Get info for FileVautl2	
+				##########################################################################################
+				for FileVault2User in mycomputerRecordHardwareFileVault2Users :
+					
+					appendDataToCVS_JAMF_Computers_FileVault2_Info = "{'Type':'Computer Hardware FileVault2 Info',\
+					\
+					'Computer ID':mycomputerRecordGeneralID,\
+					\
+					'Computer Name':mycomputerRecordGeneral['name'],\
+					\
+					'Computer FileVault2 User':FileVault2User}"
+					
+					appendJAMF_Computers_FileVault2_Info = eval(appendDataToCVS_JAMF_Computers_FileVault2_Info)
+					appendComputerFileVault2Columns = appendJAMF_Computers_FileVault2_Info
+					
+					#Set Columns	
+					Combined = MergeComputersInfo(computerColumns, hardwareColumns, appendComputerFileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns)
+					
+					#Set CSV File
+					dataToCsvComputers.append(Combined)	
+			
+				
+			if get_JAMF_Computers_Info_Local_Account == ("yes"):
+				##########################################################################################		
+				# Get info for Local Accounts	
+				##########################################################################################
+				for computerLocalAccount in mycomputerRecordHardwareLocalAccounts:
+					
+					# Put current data into variable to filter
+					filterComputerLocalAccountData = computerLocalAccount['name']
+					
+					# Regex Pattern
+					filterPattern = r"^((?![_/][a-zA-Z]*))"
+					filterDefaultUserAccountsListdata = filterDefaultUserAccountsList
+					
+					if re.match(filterPattern, filterComputerLocalAccountData): #Check if regex is correct
+					
+						if filterComputerLocalAccountData not in filterDefaultUserAccountsListdata :
+							
+							verifyLocalAccountIsAdmin = computerLocalAccount['administrator']
+							computerLocalAccountName = computerLocalAccount['name']
+							computerLocalAccountRealName = computerLocalAccount['realname']
+							
+							#Set Variables if Data Available
+							if len(str(computerLocalAccount['uid'])) == 0:
+								computerLocalAccountUID = ''
+							else:
+								computerLocalAccountUID = int(computerLocalAccount['uid'])
+								
+							computerLocalAccountIsAdmin = verifyLocalAccountIsAdmin
+							computerInInLDAP = "false"
+							
+							if includeLocalAccountInfoLDAP == "yes":
+								
+								# Set up url for getting information from each configurationProfile ID from JAMF API
+								url = JAMF_url + JIMServerLDAPLookupURL + "/user/" + filterComputerLocalAccountData
+								
+								try:
+									response = http.get(url, headers=btHeaders)
+									
+									response.raise_for_status()
+									
+									verifyLocalAccount = response.json()
+									
+								except HTTPError as http_err:
+									print(f'HTTP error occurred: {http_err}')
+								except Exception as err:
+									print(f'Other error occurred: {err}')
+									
+								
+								# For Testing
+								#print(verifyLocalAccount)
+								
+								verifidLocalAccountRecords = verifyLocalAccount['ldap_users']
+								verifidLocalAccountRecords.sort(key=lambda item: item.get('id'), reverse=False)
+								
+								for localAccountRecord in verifidLocalAccountRecords :
+									
+									#print(localAccountRecord['username'])
+									
+									#Set Variables if Data Available
+									if len(str(localAccountRecord['uid'])) == 0:
+										computerLocalAccountUID = ''
+									else:
+										computerLocalAccountUID = int(localAccountRecord['uid'])
+										
+									
+									computerInInLDAP = "true"
+									
+									
+									#print(computerRecordID, compd']
+									computerInInLDAP = "true"
+									
+						
+							appendDataToCVS_JAMF_Computers_Local_Account_Info = "{'Type':'Computer Hardware Local Account Info',\
+							\
+							'Computer ID':mycomputerRecordGeneralID,\
+							\
+							'Computer Name':mycomputerRecordGeneral['name'],\
+							\
+							'Computer Local Account Name':computerLocalAccountName,\
+							\
+							'Computer Local Account Real Name':computerLocalAccountRealName,\
+							\
+							'Computer Local Account ID':computerLocalAccountUID,\
+							\
+							'Computer Local Account is Admin ':computerLocalAccountIsAdmin,\
+							\
+							'Computer Local Account in LDAP ':computerInInLDAP}"
+						
+							
+							appendJAMF_Computers_Local_Account_Info = eval(appendDataToCVS_JAMF_Computers_Local_Account_Info)
+							appendLocalAccountColumns = appendJAMF_Computers_Local_Account_Info
+						
+							#Set Columns	
+							Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, appendLocalAccountColumns, computerGroupMembershipColumns)
+						
+							#Set CSV File
+							dataToCsvComputers.append(Combined)	
+							
+							
+			if get_JAMF_Computers_Info_Computer_Group_Membership == 'yes':
+				##########################################################################################		
+				# Get info for Computer Group Membership	
+				##########################################################################################
+				#Get Info from record
+				computerGroupMembershipRecords = mycomputerRecordComputerGroupMembership
+				
+				#Get Computer Group Info
+				for group in computerGroupMembershipRecords:
+					
+					#Renew token because the report is a long process
+					#renew token
+					url = "https://iqvia.jamfcloud.com/api/v1/auth/keep-alive"
+					
+					token = http.post(url, headers=btHeaders)
+					
+					bearer = token.json()['token']
+					
+					btHeaders = {
+						'Accept': 'application/json',
+						'Authorization': 'Bearer '+bearer
+					}
+					
+					
+					#only need group name for list
+					computerGroupMembershipName = group
+					
+					#do look up for each name interation
+					# Lookup group info by computer id
+					url = JAMF_url + "/JSSResource/computergroups/name/" + computerGroupMembershipName
+					
+					
+					try:
+						computerGroupMembershipNameResponse = http.get(url, headers=btHeaders)
+						
+						computerGroupMembershipNameResponse.raise_for_status()
+						
+						resp = computerGroupMembershipNameResponse.json()
+						
+					except HTTPError as http_err:
+						print(f'HTTP error occurred: {http_err}')
+					except Exception as err:
+						print(f'Other error occurred: {err}')	
+						
+					#For Testing
+					#print(resp)
+					
+					#Set Variables if Data Available
+					if len(str(resp['computer_group']['id'])) == 0:
+						mygroupMembershipId = ''
+					else:
+						mygroupMembershipId = int(resp['computer_group']['id'])	
+						
+					
+					groupMembershipName = resp['computer_group']['name']
+					groupMembershipIsSmart = resp['computer_group']['is_smart']
+					
+					
+					appendDataToCVS_JAMF_Computers_Info_Computer_Group_Membership = "{'Type':'Computer Group Membership Info',\
+					\
+					'Computer ID':mycomputerRecordGeneralID,\
+					\
+					'Computer Name':mycomputerRecordGeneral['name'],\
+					\
+					'Computer Group Membership Group ID':mygroupMembershipId,\
+					\
+					'Computer Group Membership Group Name':groupMembershipName,\
+					\
+					'Computer Group Membership Group Is Smart':groupMembershipIsSmart}"
+					
+					
+					appendJAMF_Computers_Info_Computer_Group_Membership = eval(appendDataToCVS_JAMF_Computers_Info_Computer_Group_Membership)
+					appendComputerGroupMembershipColumns = appendJAMF_Computers_Info_Computer_Group_Membership
+					
+					#Set Columns	
+					Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, appendComputerGroupMembershipColumns)
+					
+					#Set CSV File
+					dataToCsvComputers.append(Combined)	
 				
 
 ##################################################
