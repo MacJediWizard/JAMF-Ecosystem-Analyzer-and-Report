@@ -2119,26 +2119,28 @@ if get_JAMF_Computers_Info == ("yes"):
 			#Get Computer Group Info
 			for ConfigProfile in computerConfigurationProfileMembership:
 				
+				#Renew token because the report is a long process
+				#renew token
+				url = "https://iqvia.jamfcloud.com/api/v1/auth/keep-alive"
+				
+				token = http.post(url, headers=btHeaders)
+				
+				bearer = token.json()['token']
+				
+				btHeaders = {
+					'Accept': 'application/json',
+					'Authorization': 'Bearer '+bearer
+				}
+				
+				
 				if ConfigProfile['id'] > 0:
 					configurationProfileID = str(ConfigProfile['id'])
 					
-					#Renew token because the report is a long process
-					#renew token
-					url = "https://iqvia.jamfcloud.com/api/v1/auth/keep-alive"
-					
-					token = http.post(url, headers=btHeaders)
-					
-					bearer = token.json()['token']
-					
-					btHeaders = {
-						'Accept': 'application/json',
-						'Authorization': 'Bearer '+bearer
-					}
-					
+					#For testing
+					#print(configurationProfileID)
 					
 					# Set up url for getting information from each configurationProfile ID from JAMF API
 					url = JAMF_url + "/JSSResource/osxconfigurationprofiles/id/" + configurationProfileID
-					
 					
 					try:
 						computerConfigurationProfileMembershipResponse = http.get(url, headers=btHeaders)
@@ -2149,15 +2151,16 @@ if get_JAMF_Computers_Info == ("yes"):
 						
 					except HTTPError as http_err:
 						print(f'HTTP error occurred: {http_err}')
+						continue
 					except Exception as err:
-						print(f'Other error occurred: {err}')	
-						
-					#For Testing
-					#print(resp)
-						
-					#General Element for ID and Catagory
-					myConfigurationProfileGeneral = resp['os_x_configuration_profile']['general']			
+						print(f'Other error occurred: {err}')
+						continue
 					
+					#For Testing
+					#print(resp) 
+					
+					#General Element for ID and Catagory
+					myConfigurationProfileGeneral = resp['os_x_configuration_profile']['general']
 					
 					appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership = "{'Type':'Computer Configuration Profile Membership Info',\
 					\
