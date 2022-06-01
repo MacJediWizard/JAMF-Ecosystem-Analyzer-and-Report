@@ -13,6 +13,8 @@
 #	Version 5.0 - Adding Computer Group Membership to Computers Sheet in report
 #	Version 6.0 - Adding Results filter for Computer Record Sheet to filter by 
 #				  computer, smart group, or none.
+#	Version 7.0	- Adding Configuration Profile Membership to Computers Sheet in report.
+#	Version 7.0 - Adding Default file path and file name to choice with date and time.
 #
 #	This script take User Imput and will call the JAMF API and get all Information 
 #	related to a Policy, Configuration Profile, and Computers.
@@ -145,6 +147,11 @@
 #	Computer Group Membership Group Is Smart
 #
 #
+#	Configuration Profile Membership ID
+#
+#	Configuration Profile Membership Name
+#
+#
 ##################################################
 #	Package to Policy lookup
 ##################################################
@@ -231,7 +238,7 @@
 ##########################################################################################
 # Imports
 ##########################################################################################
-import os, sys, time, getpass, re
+import os, sys, time, getpass, re, datetime
 
 from os.path import exists
 
@@ -385,8 +392,8 @@ def getYesOrNoInput(prompt):
 
 
 #Merge Dictionaries
-def MergeComputersInfo(dict1, dict2, dict3, dict4, dict5):
-	result = dict1 | dict2 | dict3 | dict4 | dict5
+def MergeComputersInfo(dict1, dict2, dict3, dict4, dict5, dict6):
+	result = dict1 | dict2 | dict3 | dict4 | dict5 | dict6
 	return result
 
 
@@ -604,8 +611,29 @@ btHeaders = {
 ##########################################################################################
 # Get Main Groups Section.
 print("\n******************** JAMF API Excel File Info ********************\n")
-get_JAMF_FilePath_Info = checkFilePath("Please enter the full path where you want to save the file (ex. \"/Users/Shared/\") : ")
-get_JAMF_FileName_Info = checkFileName("Please enter the name you want to save the excel file as. (ex. \"myExcelFile.xlsx\") : ")
+get_JAMF_Default_Path_Name = getYesOrNoInput("Do you want to use the Default filename and path for the Report (/Users/Shared/JAMF_Excel_Report_xx_xx_xxxx-xx:xx:xx.xlsx) ? (yes or no): ")
+
+if get_JAMF_Default_Path_Name == 'yes':
+	# Get Time
+	getFileNameTime = datetime.datetime.now()
+	fileNameTimeString = (getFileNameTime.strftime("%a_%b-%d-%Y_%H-%M-%S"))
+	
+	#Set filename with time and date
+	get_JAMF_FilePath_Info = '/Users/Shared/'
+	get_JAMF_FileName_Info = 'JAMF_Excel_Report_' + str(fileNameTimeString) + '.xlsx'
+	
+elif get_JAMF_Default_Path_Name == 'no':
+	
+	get_JAMF_Default_FilePath = getYesOrNoInput("Do you want to use the Default file path for the Report (/Users/Shared/) ? (yes or no): ")
+	
+	if get_JAMF_Default_FilePath == 'yes':
+		get_JAMF_FilePath_Info = '/Users/Shared/'
+		get_JAMF_FileName_Info = checkFileName("Please enter the name you want to save the excel file as. (ex. \"myExcelFile.xlsx\") : ")
+		
+	elif get_JAMF_Default_FilePath == 'no':
+		get_JAMF_FilePath_Info = checkFilePath("Please enter the full path where you want to save the file (ex. \"/Users/Shared/\") : ")
+		get_JAMF_FileName_Info = checkFileName("Please enter the name you want to save the excel file as. (ex. \"myExcelFile.xlsx\") : ")
+
 
 getDesplayExcelReportFile = get_JAMF_FilePath_Info+get_JAMF_FileName_Info
 
@@ -645,7 +673,6 @@ if get_JAMF_Computers_Info == ("yes"):
 	print("\n******************** JAMF API Computer Info Results Filter Section. ********************\n")
 	print("\n\nPlease choose how you would like the results returned in your report. It is recommended to use a smart group id or computer id for this report for quickest results.\n")
 	print("\nPlease Note if you choose all computers the report may take some time to complete depending on the number of computers in your JAMF system.")
-	#get_JAMF_Computers_Info_SmartGroup = getYesOrNoInput("Do you want to use a JAMF Smart Group for the Computer Report Info? (yes or no): ")
 	
 	# Set options for results filter for this section and question
 	myResultsFilterLabel = "Your results filter choices are:"
@@ -787,6 +814,20 @@ if get_JAMF_Computers_Info == ("yes"):
 		
 		print("\nNot including Computer Group Membership Info Data.\n\n")
 		includeComputerGroupMembershipInfo = "no"
+		
+		
+	#Get Config Profile Membership
+	print("\n******************** JAMF API Computer Info Computer Configuration Profile Membership Section. ********************\n")
+	get_JAMF_Computers_Info_Computer_Configuration_Profile_Membership = getYesOrNoInput("Do you want to include JAMF Computer Hardware Configuration Profile Membership Info in Report? (yes or no): ")
+	if get_JAMF_Computers_Info_Computer_Configuration_Profile_Membership == ("yes"):
+		
+		print("\nIncluding Computer Configuration Profile Membership Info Data.\n\n")		
+		includeComputerConfigurationProfileMembershipInfo = "yes"
+		
+	elif get_JAMF_Computers_Info_Computer_Configuration_Profile_Membership == ("no"):
+		
+		print("\nNot including Computer Group Membership Info Data.\n\n")
+		includeComputerConfigurationProfileMembershipInfo = "no"
 
 
 elif get_JAMF_Computers_Info == ("no"):
@@ -797,6 +838,7 @@ elif get_JAMF_Computers_Info == ("no"):
 	includeFileVault2Info = "no"
 	includeLocalAccountInfo = "no"
 	includeComputerGroupMembershipInfo = "no"
+	includeComputerConfigurationProfileMembershipInfo = "no"
 	
 
 ##################################################
@@ -1054,6 +1096,11 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	'Computer Group Membership Group Is Smart':''}"
 	
 	
+	dataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership = "{'Computer Configuration Profile Membership ID':'',\
+	\
+	'Computer Configuration Profile Membership Name':''}"
+	
+	
 	##################################################
 	# Set Variables for Dict for Policy Info
 	##################################################
@@ -1268,6 +1315,11 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	'Computer Group Membership Group Is Smart':''}"
 	
 	
+	dataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership_Empty = "{'Computer Configuration Profile Membership ID':'',\
+	\
+	'Computer Configuration Profile Membership Name':''}"
+	
+	
 	##################################################
 	# Set Variables for Dict for Policy Info Empty
 	##################################################
@@ -1418,6 +1470,7 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	JAMF_Computers_FileVault2_Info = eval(dataToCVS_JAMF_Computers_FileVault2_Info)
 	JAMF_Computers_Local_Account_Info = eval(dataToCVS_JAMF_Computers_Local_Account_Info)
 	JAMF_Computers_Info_Computer_Group_Membership = eval(dataToCVS_JAMF_Computers_Info_Computer_Group_Membership)
+	JAMF_Computers_Info_Computer_Configuration_Profile_Membership = eval(dataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership)
 	
 	# Policy Info
 	JAMF_Policy_Info = eval(dataToCVS_JAMF_Policy_Info)
@@ -1447,6 +1500,7 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	JAMF_Computers_FileVault2_Info_Empty = eval(dataToCVS_JAMF_Computers_FileVault2_Info_Empty)
 	JAMF_Computers_Local_Account_Info_Empty = eval(dataToCVS_JAMF_Computers_Local_Account_Info_Empty)
 	JAMF_Computers_Info_Computer_Group_Membership_Empty = eval(dataToCVS_JAMF_Computers_Info_Computer_Group_Membership_Empty)
+	JAMF_Computers_Info_Computer_Configuration_Profile_Membership_Empty = eval(dataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership_Empty)
 	
 	# Policy Info
 	JAMF_Policy_Info_Empty = eval(dataToCVS_JAMF_Policy_Info_Empty)
@@ -1514,6 +1568,15 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 			computerGroupMembershipColumns = JAMF_Computers_Info_Computer_Group_Membership_Empty
 			
 			
+		if includeComputerConfigurationProfileMembershipInfo == 'yes':
+			
+			computerConfigurationProfileMembershipColumns = JAMF_Computers_Info_Computer_Configuration_Profile_Membership
+			
+		elif includeComputerConfigurationProfileMembershipInfo == 'no':
+			
+			computerConfigurationProfileMembershipColumns = JAMF_Computers_Info_Computer_Configuration_Profile_Membership_Empty	
+			
+			
 	elif get_JAMF_Computers_Info == "no":
 		
 		computerColumns = JAMF_Computers_Info_Empty
@@ -1521,6 +1584,7 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 		FileVault2Columns = JAMF_Computers_FileVault2_Info_Empty
 		LocalAccountColumns = JAMF_Computers_Local_Account_Info_Empty
 		computerGroupMembershipColumns = JAMF_Computers_Info_Computer_Group_Membership_Empty
+		computerConfigurationProfileMembershipColumns = JAMF_Computers_Info_Computer_Configuration_Profile_Membership_Empty	
 						
 	
 	# Policy Fields
@@ -1746,6 +1810,7 @@ if get_JAMF_Computers_Info == ("yes"):
 		mycomputerRecordHardwareFileVault2Users = computerRecordProfile['computer']['hardware']['filevault2_users']
 		mycomputerRecordHardwareLocalAccounts = computerRecordProfile['computer']['groups_accounts']['local_accounts']
 		mycomputerRecordComputerGroupMembership = computerRecordProfile['computer']['groups_accounts']['computer_group_memberships']
+		mycomputerConfigurationProfileMembership = computerRecordProfile['computer']['configuration_profiles']
 		
 		
 		##########################################################################################
@@ -1804,7 +1869,7 @@ if get_JAMF_Computers_Info == ("yes"):
 		appendComputerColumns = appendJAMF_Computers_Info
 		
 		#Set Columns	
-		Combined = MergeComputersInfo(appendComputerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns)
+		Combined = MergeComputersInfo(appendComputerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns, computerConfigurationProfileMembershipColumns)
 		
 		#Set CSV File
 		dataToCsvComputers.append(Combined)	
@@ -1838,7 +1903,7 @@ if get_JAMF_Computers_Info == ("yes"):
 			appendComputerHardwareColumns = appendJAMF_Computers_Hardware_Info
 			
 			#Set Columns	
-			Combined = MergeComputersInfo(computerColumns, appendComputerHardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns)
+			Combined = MergeComputersInfo(computerColumns, appendComputerHardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns, computerConfigurationProfileMembershipColumns)
 			
 			#Set CSV File
 			dataToCsvComputers.append(Combined)	
@@ -1862,7 +1927,7 @@ if get_JAMF_Computers_Info == ("yes"):
 				appendComputerFileVault2Columns = appendJAMF_Computers_FileVault2_Info
 				
 				#Set Columns	
-				Combined = MergeComputersInfo(computerColumns, hardwareColumns, appendComputerFileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns)
+				Combined = MergeComputersInfo(computerColumns, hardwareColumns, appendComputerFileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns, computerConfigurationProfileMembershipColumns)
 				
 				#Set CSV File
 				dataToCsvComputers.append(Combined)	
@@ -1936,10 +2001,6 @@ if get_JAMF_Computers_Info == ("yes"):
 								computerInInLDAP = "true"
 								
 								
-								#print(computerRecordID, compd']
-								computerInInLDAP = "true"
-								
-								
 						appendDataToCVS_JAMF_Computers_Local_Account_Info = "{'Type':'Computer Hardware Local Account Info',\
 						\
 						'Computer ID':mycomputerRecordGeneralID,\
@@ -1961,7 +2022,7 @@ if get_JAMF_Computers_Info == ("yes"):
 						appendLocalAccountColumns = appendJAMF_Computers_Local_Account_Info
 						
 						#Set Columns	
-						Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, appendLocalAccountColumns, computerGroupMembershipColumns)
+						Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, appendLocalAccountColumns, computerGroupMembershipColumns, computerConfigurationProfileMembershipColumns)
 						
 						#Set CSV File
 						dataToCsvComputers.append(Combined)	
@@ -2042,10 +2103,82 @@ if get_JAMF_Computers_Info == ("yes"):
 				appendComputerGroupMembershipColumns = appendJAMF_Computers_Info_Computer_Group_Membership
 				
 				#Set Columns	
-				Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, appendComputerGroupMembershipColumns)
+				Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, appendComputerGroupMembershipColumns, computerConfigurationProfileMembershipColumns)
 				
 				#Set CSV File
 				dataToCsvComputers.append(Combined)
+				
+				
+		if get_JAMF_Computers_Info_Computer_Configuration_Profile_Membership == 'yes':
+			##########################################################################################		
+			# Get info for Computer Configuration Profile Membership	
+			##########################################################################################
+			#Get Info from record
+			computerConfigurationProfileMembership = mycomputerConfigurationProfileMembership
+			
+			#Get Computer Group Info
+			for ConfigProfile in computerConfigurationProfileMembership:
+				
+				if ConfigProfile['id'] > 0:
+					configurationProfileID = str(ConfigProfile['id'])
+					
+					#Renew token because the report is a long process
+					#renew token
+					url = "https://iqvia.jamfcloud.com/api/v1/auth/keep-alive"
+					
+					token = http.post(url, headers=btHeaders)
+					
+					bearer = token.json()['token']
+					
+					btHeaders = {
+						'Accept': 'application/json',
+						'Authorization': 'Bearer '+bearer
+					}
+					
+					
+					# Set up url for getting information from each configurationProfile ID from JAMF API
+					url = JAMF_url + "/JSSResource/osxconfigurationprofiles/id/" + configurationProfileID
+					
+					
+					try:
+						computerConfigurationProfileMembershipResponse = http.get(url, headers=btHeaders)
+						
+						computerConfigurationProfileMembershipResponse.raise_for_status()
+						
+						resp = computerConfigurationProfileMembershipResponse.json()
+						
+					except HTTPError as http_err:
+						print(f'HTTP error occurred: {http_err}')
+					except Exception as err:
+						print(f'Other error occurred: {err}')	
+						
+					#For Testing
+					#print(resp)
+						
+					#General Element for ID and Catagory
+					myConfigurationProfileGeneral = resp['os_x_configuration_profile']['general']			
+					
+					
+					appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership = "{'Type':'Computer Configuration Profile Membership Info',\
+					\
+					'Computer ID':mycomputerRecordGeneralID,\
+					\
+					'Computer Name':mycomputerRecordGeneral['name'],\
+					\
+					'Computer Configuration Profile Membership ID':myConfigurationProfileGeneral['id'],\
+					\
+					'Computer Configuration Profile Membership Name':myConfigurationProfileGeneral['name']}"
+					
+					
+					appendJAMF_Computers_Info_Computer_Configuration_Profile_Membership = eval(appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership)
+					appendComputerConfigurationProfileMembershipColumns = appendJAMF_Computers_Info_Computer_Configuration_Profile_Membership
+					
+					#Set Columns	
+					Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns, appendComputerConfigurationProfileMembershipColumns)
+					
+					#Set CSV File
+					dataToCsvComputers.append(Combined)
+				
 		
 	else:		
 		
@@ -2083,6 +2216,7 @@ if get_JAMF_Computers_Info == ("yes"):
 			mycomputerRecordHardwareFileVault2Users = computerRecordProfile['computer']['hardware']['filevault2_users']
 			mycomputerRecordHardwareLocalAccounts = computerRecordProfile['computer']['groups_accounts']['local_accounts']
 			mycomputerRecordComputerGroupMembership = computerRecordProfile['computer']['groups_accounts']['computer_group_memberships']
+			mycomputerConfigurationProfileMembership = computerRecordProfile['computer']['configuration_profiles']
 			
 			
 			##########################################################################################
@@ -2141,7 +2275,7 @@ if get_JAMF_Computers_Info == ("yes"):
 			appendComputerColumns = appendJAMF_Computers_Info
 			
 			#Set Columns	
-			Combined = MergeComputersInfo(appendComputerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns)
+			Combined = MergeComputersInfo(appendComputerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns, computerConfigurationProfileMembershipColumns)
 			
 			#Set CSV File
 			dataToCsvComputers.append(Combined)	
@@ -2175,7 +2309,7 @@ if get_JAMF_Computers_Info == ("yes"):
 				appendComputerHardwareColumns = appendJAMF_Computers_Hardware_Info
 				
 				#Set Columns	
-				Combined = MergeComputersInfo(computerColumns, appendComputerHardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns)
+				Combined = MergeComputersInfo(computerColumns, appendComputerHardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns, computerConfigurationProfileMembershipColumns)
 				
 				#Set CSV File
 				dataToCsvComputers.append(Combined)	
@@ -2199,7 +2333,7 @@ if get_JAMF_Computers_Info == ("yes"):
 					appendComputerFileVault2Columns = appendJAMF_Computers_FileVault2_Info
 					
 					#Set Columns	
-					Combined = MergeComputersInfo(computerColumns, hardwareColumns, appendComputerFileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns)
+					Combined = MergeComputersInfo(computerColumns, hardwareColumns, appendComputerFileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns, computerConfigurationProfileMembershipColumns)
 					
 					#Set CSV File
 					dataToCsvComputers.append(Combined)	
@@ -2272,10 +2406,6 @@ if get_JAMF_Computers_Info == ("yes"):
 									
 									computerInInLDAP = "true"
 									
-									
-									#print(computerRecordID, compd']
-									computerInInLDAP = "true"
-									
 						
 							appendDataToCVS_JAMF_Computers_Local_Account_Info = "{'Type':'Computer Hardware Local Account Info',\
 							\
@@ -2298,7 +2428,7 @@ if get_JAMF_Computers_Info == ("yes"):
 							appendLocalAccountColumns = appendJAMF_Computers_Local_Account_Info
 						
 							#Set Columns	
-							Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, appendLocalAccountColumns, computerGroupMembershipColumns)
+							Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, appendLocalAccountColumns, computerGroupMembershipColumns, computerConfigurationProfileMembershipColumns)
 						
 							#Set CSV File
 							dataToCsvComputers.append(Combined)	
@@ -2379,12 +2509,87 @@ if get_JAMF_Computers_Info == ("yes"):
 					appendComputerGroupMembershipColumns = appendJAMF_Computers_Info_Computer_Group_Membership
 					
 					#Set Columns	
-					Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, appendComputerGroupMembershipColumns)
+					Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, appendComputerGroupMembershipColumns, computerConfigurationProfileMembershipColumns)
 					
 					#Set CSV File
 					dataToCsvComputers.append(Combined)	
+					
+					
+			if get_JAMF_Computers_Info_Computer_Configuration_Profile_Membership == 'yes':
+				##########################################################################################		
+				# Get info for Computer Configuration Profile Membership	
+				##########################################################################################
+				#Get Info from record
+				computerConfigurationProfileMembership = mycomputerConfigurationProfileMembership
 				
+				#Get Computer Group Info
+				for ConfigProfile in computerConfigurationProfileMembership:
+					
+					#Renew token because the report is a long process
+					#renew token
+					url = "https://iqvia.jamfcloud.com/api/v1/auth/keep-alive"
+					
+					token = http.post(url, headers=btHeaders)
+					
+					bearer = token.json()['token']
+					
+					btHeaders = {
+						'Accept': 'application/json',
+						'Authorization': 'Bearer '+bearer
+					}
+					
+					
+					if ConfigProfile['id'] > 0:
+						configurationProfileID = str(ConfigProfile['id'])
+					
+						#For testing
+						#print(configurationProfileID)
 
+						# Set up url for getting information from each configurationProfile ID from JAMF API
+						url = JAMF_url + "/JSSResource/osxconfigurationprofiles/id/" + configurationProfileID
+						
+						try:
+							computerConfigurationProfileMembershipResponse = http.get(url, headers=btHeaders)
+							
+							computerConfigurationProfileMembershipResponse.raise_for_status()
+							
+							resp = computerConfigurationProfileMembershipResponse.json()
+							
+						except HTTPError as http_err:
+							print(f'HTTP error occurred: {http_err}')
+							continue
+						except Exception as err:
+							print(f'Other error occurred: {err}')
+							continue
+									
+						#For Testing
+						#print(resp) 
+						
+						#General Element for ID and Catagory
+						myConfigurationProfileGeneral = resp['os_x_configuration_profile']['general']
+
+						appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership = "{'Type':'Computer Configuration Profile Membership Info',\
+						\
+						'Computer ID':mycomputerRecordGeneralID,\
+						\
+						'Computer Name':mycomputerRecordGeneral['name'],\
+						\
+						'Computer Configuration Profile Membership ID':myConfigurationProfileGeneral['id'],\
+						\
+						'Computer Configuration Profile Membership Name':myConfigurationProfileGeneral['name']}"
+						
+						
+						appendJAMF_Computers_Info_Computer_Configuration_Profile_Membership = eval(appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership)
+						appendComputerConfigurationProfileMembershipColumns = appendJAMF_Computers_Info_Computer_Configuration_Profile_Membership
+						
+						#Set Columns	
+						Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns, appendComputerConfigurationProfileMembershipColumns)
+						
+						#Set CSV File
+						dataToCsvComputers.append(Combined)
+						
+				
+				
 ##################################################
 # Process Requested Info for Policies
 ##################################################
