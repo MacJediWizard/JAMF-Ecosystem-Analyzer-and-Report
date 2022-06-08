@@ -217,7 +217,7 @@
 #	Permission is hereby granted, free of charge, to any person obtaining a copy
 #	of this software and associated documentation files (the "Software"), to deal
 #	in the Software without restriction, including without limitation the rights
-#	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
 #	copies of the Software, and to permit persons to whom the Software is
 #	furnished to do so, subject to the following conditions:
 #
@@ -2161,6 +2161,13 @@ if get_JAMF_Computers_Info == ("yes"):
 					
 					#General Element for ID and Catagory
 					myConfigurationProfileGeneral = resp['os_x_configuration_profile']['general']
+					myConfigurationProfileGeneralID = myConfigurationProfileGeneral['id']
+					myConfigurationProfileGeneralName = myConfigurationProfileGeneral['name']
+					
+					print(myConfigurationProfileGeneral)
+					print(myConfigurationProfileGeneralID)
+					print(myConfigurationProfileGeneralName)
+					
 					
 					appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership = "{'Type':'Computer Configuration Profile Membership Info',\
 					\
@@ -2168,9 +2175,9 @@ if get_JAMF_Computers_Info == ("yes"):
 					\
 					'Computer Name':mycomputerRecordGeneral['name'],\
 					\
-					'Computer Configuration Profile Membership ID':myConfigurationProfileGeneral['id'],\
+					'Computer Configuration Profile Membership ID':myConfigurationProfileGeneralID,\
 					\
-					'Computer Configuration Profile Membership Name':myConfigurationProfileGeneral['name']}"
+					'Computer Configuration Profile Membership Name':myConfigurationProfileGeneralName}"
 					
 					
 					appendJAMF_Computers_Info_Computer_Configuration_Profile_Membership = eval(appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership)
@@ -2570,6 +2577,12 @@ if get_JAMF_Computers_Info == ("yes"):
 						
 						#General Element for ID and Catagory
 						myConfigurationProfileGeneral = resp['os_x_configuration_profile']['general']
+						myConfigurationProfileGeneralID = myConfigurationProfileGeneral['id']
+						myConfigurationProfileGeneralName = myConfigurationProfileGeneral['name']
+						
+						print(myConfigurationProfileGeneral)
+						print(myConfigurationProfileGeneralID)
+						print(myConfigurationProfileGeneralName)
 
 						appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership = "{'Type':'Computer Configuration Profile Membership Info',\
 						\
@@ -2577,9 +2590,9 @@ if get_JAMF_Computers_Info == ("yes"):
 						\
 						'Computer Name':mycomputerRecordGeneral['name'],\
 						\
-						'Computer Configuration Profile Membership ID':myConfigurationProfileGeneral['id'],\
+						'Computer Configuration Profile Membership ID':myConfigurationProfileGeneralID,\
 						\
-						'Computer Configuration Profile Membership Name':myConfigurationProfileGeneral['name']}"
+						'Computer Configuration Profile Membership Name':myConfigurationProfileGeneralName}"
 						
 						
 						appendJAMF_Computers_Info_Computer_Configuration_Profile_Membership = eval(appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership)
