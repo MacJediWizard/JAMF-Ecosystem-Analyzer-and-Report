@@ -1753,7 +1753,7 @@ if get_JAMF_Computers_Info == ("yes"):
 	if usingFilter == 'computerFilter':
 		
 		computerRecords = resp['computer']['general']
-		
+
 		
 	elif usingFilter == 'smartGroupFilter':
 		
@@ -2164,9 +2164,10 @@ if get_JAMF_Computers_Info == ("yes"):
 					myConfigurationProfileGeneralID = myConfigurationProfileGeneral['id']
 					myConfigurationProfileGeneralName = myConfigurationProfileGeneral['name']
 					
-					print(myConfigurationProfileGeneral)
-					print(myConfigurationProfileGeneralID)
-					print(myConfigurationProfileGeneralName)
+					#For Testing
+#					print(myConfigurationProfileGeneral)
+#					print(myConfigurationProfileGeneralID)
+#					print(myConfigurationProfileGeneralName)
 					
 					
 					appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership = "{'Type':'Computer Configuration Profile Membership Info',\
@@ -2580,9 +2581,10 @@ if get_JAMF_Computers_Info == ("yes"):
 						myConfigurationProfileGeneralID = myConfigurationProfileGeneral['id']
 						myConfigurationProfileGeneralName = myConfigurationProfileGeneral['name']
 						
-						print(myConfigurationProfileGeneral)
-						print(myConfigurationProfileGeneralID)
-						print(myConfigurationProfileGeneralName)
+						#For testing
+#						print(myConfigurationProfileGeneral)
+#						print(myConfigurationProfileGeneralID)
+#						print(myConfigurationProfileGeneralName)
 
 						appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership = "{'Type':'Computer Configuration Profile Membership Info',\
 						\
