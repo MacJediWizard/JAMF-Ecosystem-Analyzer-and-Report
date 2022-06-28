@@ -15,6 +15,7 @@
 #				  computer, smart group, or none.
 #	Version 7.0	- Adding Configuration Profile Membership to Computers Sheet in report.
 #	Version 7.0 - Adding Default file path and file name to choice with date and time.
+#	Version 8.0 - Adding Script to Policy lookup for unused Scripts.
 #
 #	This script take User Imput and will call the JAMF API and get all Information 
 #	related to a Policy, Configuration Profile, and Computers.
@@ -178,6 +179,25 @@
 #
 #	PreStage Policy Name if used 
 #	in PreStage Policy
+#
+#
+##################################################
+#	Script to Policy lookup
+##################################################
+#	Provides the following:
+#	
+#	Script used or Script Not Used
+#	in Policies
+#	
+#	Script ID
+#
+#	Script Name
+#
+#	Script File Name
+#
+#	Policy ID if used in a Policy
+#
+#	Policy Name if used in Policy
 #
 #
 ##################################################
