@@ -159,6 +159,28 @@
 		in PreStage Policy	
 
 
+
+### Script to Policy lookup
+
+		Provides the following:
+		
+		Script used or Script Not Used
+		in Policies
+		
+		Which Policy Script is used in.
+		
+		Script ID
+		
+		Script Name
+		
+		Script File Name
+		
+		Policy ID if used in a Policy
+		
+		Policy Name if used in Policy
+
+
+
 ## 	How to run
 		Have python3 on your device. Run the script. Enter the information at the prompts.
 		Dependancies will be automatically installed. Enjoy!!!
