@@ -292,6 +292,7 @@ dataToCsvComputers = []
 dataToCsvPolicy = []
 dataToCsvConfigurationProfile = []
 dataToCsvPackageToPolicy = []
+dataToCsvScriptToPolicy = []
 JIMServerList = []
 
 
@@ -543,6 +544,15 @@ def checkIfPackageIsUsedInPolicy(data, key, value):
 	return False
 
 
+def checkIfScriptIsUsedInPolicy(data, key, value):
+	for i in range(len(data)):
+		try:
+			if(data[i][key]==value): return True
+		except:
+			pass
+	return False
+
+
 ##########################################################################################
 # Get User Input
 ##########################################################################################
@@ -652,6 +662,7 @@ get_JAMF_Computers_Info = getYesOrNoInput("Do you want to include JAMF Computer 
 get_JAMF_Policy_Info = getYesOrNoInput("Do you want to include JAMF Policy Info Section in Report? (yes or no): ")
 get_JAMF_Configuration_Profile_Info = getYesOrNoInput("Do you want to include JAMF Configuration Profile Info Section in Report? (yes or no): ")
 get_JAMF_Package_To_Policy_Info = getYesOrNoInput("Do you want to include JAMF Package To Policy Info Section in Report? (yes or no): ")
+get_JAMF_Script_To_Policy_Info = getYesOrNoInput("Do you want to include JAMF Script To Policy Info Section in Report? (yes or no): ")
 
 
 ##########################################################################################
@@ -1013,13 +1024,26 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 		print("\nNot Including PreStage Policy Info.\n\n")
 		
 		includePreStagePackageToPolicyInfo = "no"
+		
+		
+##################################################
+# Get Jamf Script To Policy Info
+##################################################
+print("\n\n******************** JAMF API Report Included Script To Policy Info ********************\n")
+
+if get_JAMF_Script_To_Policy_Info == ("yes"):
+	
+	#Get Script To Policy Info
+	print("\nIncluding JAMF Regular Script Info.\n\n")
+	
+	includeRegularScriptToPolicyInfo = "yes"
 
 				
 ##################################################
 # Set Variables for dict
 ##################################################
 #Check Options set and desplay message to user
-if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes' or get_JAMF_Package_To_Policy_Info == 'yes':
+if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes' or get_JAMF_Package_To_Policy_Info == 'yes' or get_JAMF_Script_To_Policy_Info == 'yes':
 	
 	print("\n******************** Running Requested Report Now. ********************\n\n")
 	
@@ -1241,6 +1265,30 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	\
 	'Package File Name':''}"
 	
+	
+	##################################################
+	# Set Variables for Dict for Script to Policies Info
+	##################################################
+	dataToCVS_JAMF_Script_To_Regular_Policy_Info = "{'Type':'',\
+	\
+	'Script ID':'',\
+	\
+	'Script Name':'',\
+	\
+	'Script File Name':'',\
+	\
+	'Policy ID':'',\
+	\
+	'Policy Name':''}"
+	
+	dataToCVS_JAMF_Script_Unused_Info = "{'Type':'',\
+	\
+	'Script ID':'',\
+	\
+	'Script Name':'',\
+	\
+	'Script File Name':''}"	
+	
 
 	##################################################
 	# Set Variables for Dict for Computers Info to empty
@@ -1418,7 +1466,7 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	
 	
 	##################################################
-	# Set Variables for Dict for Configuration Profile Info to empty
+	# Set Variables for Dict for Script Profile Info to empty
 	##################################################
 	dataToCVS_JAMF_Package_To_Regular_Policy_Info_Empty = "{'Type':'',\
 	\
@@ -1462,6 +1510,30 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	
 	
 	##################################################
+	# Set Variables for Dict for Script to Policies Info Empty
+	##################################################
+	dataToCVS_JAMF_Script_To_Regular_Policy_Info_Empty = "{'Type':'',\
+	\
+	'Script ID':'',\
+	\
+	'Script Name':'',\
+	\
+	'Script File Name':'',\
+	\
+	'Policy ID':'',\
+	\
+	'Policy Name':''}"
+	
+	dataToCVS_JAMF_Script_Unused_Info_Empty = "{'Type':'',\
+	\
+	'Script ID':'',\
+	\
+	'Script Name':'',\
+	\
+	'Script File Name':''}"	
+	
+	
+	##################################################
 	# Take Variables and make Dict
 	##################################################
 	# Computers Info
@@ -1489,6 +1561,11 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	JAMF_Package_To_Regular_Policy_Info = eval(dataToCVS_JAMF_Package_To_Regular_Policy_Info)
 	JAMF_Package_To_PreStage_Policy_Info = eval(dataToCVS_JAMF_Package_To_PreStage_Policy_Info)
 	JAMF_Package_Unused_Info = eval(dataToCVS_JAMF_Package_Unused_Info)
+	
+	
+	# Script to Policy Info
+	JAMF_Script_To_Regular_Policy_Info = eval(dataToCVS_JAMF_Script_To_Regular_Policy_Info)
+	JAMF_Script_Unused_Info = eval(dataToCVS_JAMF_Script_Unused_Info)
 	
 	
 	##################################################
@@ -1519,6 +1596,10 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	JAMF_Package_To_Regular_Policy_Info_Empty = eval(dataToCVS_JAMF_Package_To_Regular_Policy_Info_Empty)
 	JAMF_Package_To_PreStage_Policy_Info_Empty = eval(dataToCVS_JAMF_Package_To_PreStage_Policy_Info_Empty)
 	JAMF_Package_Unused_Info_Empty = eval(dataToCVS_JAMF_Package_Unused_Info_Empty)
+	
+	# Script to Policy Info
+	JAMF_Script_To_Regular_Policy_Info_Empty = eval(dataToCVS_JAMF_Script_To_Regular_Policy_Info_Empty)
+	JAMF_Script_Unused_Info_Empty = eval(dataToCVS_JAMF_Script_Unused_Info_Empty)
 	
 	
 	##################################################
@@ -1710,7 +1791,21 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 			
 			packageToPreStagePolicyColumns = JAMF_Package_To_PreStage_Policy_Info_Empty
 			packageUnusedColumns = JAMF_Package_Unused_Info_Empty
+			
+			
+	# Script to Policy Info fields
+	if get_JAMF_Script_To_Policy_Info == 'yes':
 		
+		# Regular columns
+		if includeRegularScriptToPolicyInfo == "yes":
+			
+			ScriptToRegularPolicyColumns = JAMF_Script_To_Regular_Policy_Info
+			ScriptUnusedColumns = JAMF_Script_Unused_Info	
+			
+		elif includeRegularScriptToPolicyInfo == "no":
+			
+			ScriptToRegularPolicyColumns = JAMF_Script_To_Regular_Policy_Info_Empty
+			ScriptUnusedColumns = JAMF_Script_Unused_Info_Empty
 			
 
 ##########################################################################################
@@ -3934,12 +4029,272 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 			
 			#print(f"No, Package ID: " + str(packageRecordsID) + ", Package Name: " + packageRecordsName + " is not being used in any Policies")
 			
+			
+##########################################################################################
+# Script to Policies Section
+##########################################################################################			
+if get_JAMF_Script_To_Policy_Info == ("yes"):
+	
+	##########################################################################################
+	# Process Script to Policies information for csv / Excel
+	##########################################################################################
+	# Set up url for getting a list of all Script to Regular Policies from JAMF API
+	url = JAMF_url + "/JSSResource/policies"
+	
+	# Set up list
+	policyScriptsList = []
+	
+	try:
+		policyResponse = http.get(url, headers=btHeaders)
+		
+		policyResponse.raise_for_status()
+		
+		resp = policyResponse.json()
+		
+	except HTTPError as http_err:
+		print(f'HTTP error occurred: {http_err}')
+	except Exception as err:
+		print(f'Other error occurred: {err}')	
+		
+	#For Testing
+	#print(resp)
+		
+	policyRecords = resp['policies']
+	policyRecords.sort(key=lambda item: item.get('id'), reverse=False)
+	
+	
+	for policy in policyRecords:
+		
+		# Get Policy ID to do JAMF API lookup 
+		policyRecordsID = str(policy['id']) 
+		
+		#	For Testing
+		#print(policyRecordsID)
+		
+		# Set up url for getting information from each policy ID from JAMF API
+		url = JAMF_url + "/JSSResource/policies/id/" + policyRecordsID
+		
+		try:
+			PolicyRecordsResponse = http.get(url, headers=btHeaders)
+			
+			PolicyRecordsResponse.raise_for_status()
+			
+			getPolicyRecords = PolicyRecordsResponse.json()
+			
+		except HTTPError as http_err:
+			print(f'HTTP error occurred: {http_err}')
+		except Exception as err:
+			print(f'Other error occurred: {err}')
+			
+		# For Testing
+		#print(getPolicyRecords)
+			
+		#Get policy ID and Name for report
+		policyInfoID = getPolicyRecords['policy']['general']['id']
+		policyInfoName = getPolicyRecords['policy']['general']['name']
+		
+		# Find the Script data in each policy
+		policyScriptInfo = getPolicyRecords['policy']['scripts']
+		
+		
+		# Individual Policy Info for each record
+		getMyPolicyIDList = (str(policyInfoID) + " - " + policyInfoName)
+		
+		# Get info for Policies
+		print("Gathering List for Script Info from Policy ID: " + getMyPolicyIDList)
+		
+		
+		#Get Script ID from Policy to compare and find unused Scripts.
+		for policyScript in policyScriptInfo:
+			
+			#get Script info for dict
+			policyScriptsDict = {'Policy ID': policyInfoID, 'Policy Name': policyInfoName, 'Script ID': str(policyScript['id'])}
+			
+			policyScriptsList.append(policyScriptsDict)
+			
+			
+	#For testing
+	#print(policyScriptsList)	
+			
+			
+	##########################################################################################
+	# lookup Script information and compair to dict and list to find what is in use.
+	##########################################################################################
+	url = JAMF_url + "/JSSResource/scripts"
+	
+	try:
+		ScriptResponse = http.get(url, headers=btHeaders)
+		
+		ScriptResponse.raise_for_status()
+		
+		resp = ScriptResponse.json()
+		
+	except HTTPError as http_err:
+		print(f'HTTP error occurred: {http_err}')
+	except Exception as err:
+		print(f'Other error occurred: {err}')	
+		
+	#For Testing
+	#print(resp)
+		
+	ScriptRecords = resp['scripts']
+	ScriptRecords.sort(key=lambda item: item.get('id'), reverse=False)
+	
+	
+	#print(ScriptRecords)
+	
+	
+	#process Script records and set dict and list
+	for Script in ScriptRecords:
+		
+		ScriptRecordsID = Script['id']
+		ScriptRecordsName = Script['name']
+		
+		key = 'Script ID' 
+		value = str(ScriptRecordsID)
+		
+		# Individual Policy Info for each record
+		getMyScriptList = (str(ScriptRecordsID) + " - " + ScriptRecordsName)
+		
+		# Get info for Policies
+		print("Checking Policies that use Script: " + getMyScriptList) 
+		
+		#for testing
+		#print(ScriptRecordsID)
+		#print(policyScriptsList)
+		#print(type(value))
+		
+		
+		#Process Info for Scripts to policies
+		if checkIfScriptIsUsedInPolicy(policyScriptsList, key, value):
+			
+			for policy in policyScriptsList:
+				
+				policyScriptID = policy['Script ID']
+				
+				checkPolicyListID = str(policyScriptID)
+				checkScriptRecordsID = str(ScriptRecordsID)
+				
+				
+				if checkPolicyListID == checkScriptRecordsID:
+					
+					# Set up url for getting information from each policy ID from JAMF API
+					url = JAMF_url + "/JSSResource/scripts/id/" + str(ScriptRecordsID)
+					
+					try:
+						myScriptRecordsResponse = http.get(url, headers=btHeaders)
+						
+						myScriptRecordsResponse.raise_for_status()
+						
+						getMyScriptRecords = myScriptRecordsResponse.json()
+						
+					except HTTPError as http_err:
+						print(f'HTTP error occurred: {http_err}')
+					except Exception as err:
+						print(f'Other error occurred: {err}')
+						
+					# for testing
+					#print(getMyScriptRecords['script']['id'])
+						
+						
+					#Set Variables if Data Available
+					if len(str(getMyScriptRecords['script']['id'])) == 0:
+						myCurrentScriptID = ''
+					else:
+						myCurrentScriptID = int(getMyScriptRecords['script']['id'])
+						
+					myCurrentScriptName =  getMyScriptRecords['script']['name']
+					myScriptRecordsFileName = getMyScriptRecords['script']['filename']
+					
+					if len(str(policy['Policy ID'])) == 0:
+						myCurrentPolicyID = ''
+					else:
+						myCurrentPolicyID = int(policy['Policy ID'])
+						
+					myCurrentPolicyName = policy['Policy Name']
+					
+					
+					appendDataToCVS_JAMF_Script_To_Regular_Policy_Info = "{'Type':'Script Used',\
+					\
+					'Script ID':myCurrentScriptID,\
+					\
+					'Script Name':myCurrentScriptName,\
+					\
+					'Script File Name':myScriptRecordsFileName,\
+					\
+					'Policy ID':myCurrentPolicyID,\
+					\
+					'Policy Name':myCurrentPolicyName}"
+					
+					appendJAMF_Script_To_Regular_Policy_Info = eval(appendDataToCVS_JAMF_Script_To_Regular_Policy_Info)
+					appendScriptToRegularPolicyColumns = appendJAMF_Script_To_Regular_Policy_Info
+					
+					#Set Columns	
+					Combined = appendScriptToRegularPolicyColumns
+					
+					#Set CSV File
+					dataToCsvScriptToPolicy.append(Combined)
+					
+					# For Testing
+					#print(f"Yes, Script ID: " + myCurrentScriptID + " with Script Name: " + myCurrentScriptName + " and Script File Name: " + myScriptRecordsFileName + ", is being used by Policy ID: " + str(myCurrentPolicyID) + " with Policy Name: " + myCurrentPolicyName)
+					
+		else:
+			
+			# Set up url for getting information from each policy ID from JAMF API
+			url = JAMF_url + "/JSSResource/scripts/id/" + str(ScriptRecordsID)
+			
+			try:
+				myScriptRecordsResponse = http.get(url, headers=btHeaders)
+				
+				myScriptRecordsResponse.raise_for_status()
+				
+				getMyScriptRecords = myScriptRecordsResponse.json()
+				
+			except HTTPError as http_err:
+				print(f'HTTP error occurred: {http_err}')
+			except Exception as err:
+				print(f'Other error occurred: {err}')
+				
+			# for testing
+			#print(getMyScriptRecords['script']['id'])
+				
+				
+			#Set Variables if Data Available
+			if len(str(getMyScriptRecords['script']['id'])) == 0:
+				myUnusedCurrentScriptID = ''
+			else:
+				myUnusedCurrentScriptID = int(getMyScriptRecords['script']['id'])
+				
+			myUnusedScriptName =  getMyScriptRecords['script']['name']
+			myUnusedScriptRecordsFileName = getMyScriptRecords['script']['filename']
+			
+			
+			appendDataToCVS_JAMF_Script_Unused_Info = "{'Type':'Script Not Used',\
+			\
+			'Script ID':myUnusedCurrentScriptID,\
+			\
+			'Script Name':myUnusedScriptName,\
+			\
+			'Script File Name':myUnusedScriptRecordsFileName}"
+			
+			
+			appendJAMF_Script_Unused_Info = eval(appendDataToCVS_JAMF_Script_Unused_Info)
+			appendScriptUnusedColumns = appendJAMF_Script_Unused_Info
+			
+			#Set Columns	
+			Combined = appendScriptUnusedColumns
+			
+			#Set CSV File
+			dataToCsvScriptToPolicy.append(Combined)
+			
+			#print(f"No, Script ID: " + str(ScriptRecordsID) + ", Script Name: " + ScriptRecordsName + " is not being used in any Policies")
+						
 
 ##########################################################################################
 # Process data for Export to csv / Excel
 ##########################################################################################
 # Check and make sure that either Policy or Config Profile was selected
-if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes' or get_JAMF_Package_To_Policy_Info == 'yes':
+if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes' or get_JAMF_Package_To_Policy_Info == 'yes' or get_JAMF_Script_To_Policy_Info == 'yes':
 	
 	# Get export to csv file
 	if get_JAMF_Computers_Info == ("yes"):
@@ -3953,6 +4308,9 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 		
 	if get_JAMF_Package_To_Policy_Info == ("yes"):	
 		df_PackageToPolicy = pd.DataFrame(dataToCsvPackageToPolicy)
+		
+	if get_JAMF_Script_To_Policy_Info == ("yes"):	
+		df_ScriptToPolicy = pd.DataFrame(dataToCsvScriptToPolicy)
 
 	
 	print('\n******************** Creating Jamf Instance Info file. ********************\n')
@@ -3972,6 +4330,9 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 		
 	if get_JAMF_Package_To_Policy_Info == ("yes"):
 		df_PackageToPolicy.to_excel(Excelwriter, sheet_name='Jamf Packages To Policy Info')
+		
+	if get_JAMF_Script_To_Policy_Info == ("yes"):
+		df_ScriptToPolicy.to_excel(Excelwriter, sheet_name='Jamf Scripts To Policy Info')
 	
 	#And finally we save the file
 	Excelwriter.save()
