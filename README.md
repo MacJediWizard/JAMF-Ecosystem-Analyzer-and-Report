@@ -2,7 +2,7 @@
 	
 ### This script runs api calls to get information on Policies, Scripts in Policies, Packages in Policies, Scope in policies, Configuration Profiles, Scopes in Configuration profiles, and Package to Policy It saves the information in a xlsx document for working with in Excel or similar. 
 		
-### The Script runs on Python 3 and uses the Libraries "Requests", "Pandas", "openpyxl", and "xlsxwriter". There is a check built in so as long as you have Python3 installed, the other libraries will be installed automatically with pip3.
+### The Script runs on Python 3.9 + and uses the Libraries "Requests", "Pandas", "openpyxl", and "xlsxwriter". There is a check built in so as long as you have Python3 installed, the other libraries will be installed automatically with pip3.
 
 
 ##	Fields returned in Excel are as follows below:
@@ -182,10 +182,10 @@
 
 
 ## 	How to run
-		Have python3 on your device. Run the script. Enter the information at the prompts.
+		Have python 3.9 on your device. Run the script. Enter the information at the prompts.
 		Dependancies will be automatically installed. Enjoy!!!
 	
-		The only requirement is that you have Python3 on the device. All other libraries
+		The only requirement is that you have Python 3.9 on the device. All other libraries
 		the script will look for them and download if they are not found.
 		
 		Run from terminal and answer the 3 fields to connect to your JAMF Instance.
