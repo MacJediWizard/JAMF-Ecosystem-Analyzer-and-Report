@@ -2155,7 +2155,7 @@ if get_JAMF_Computers_Info == ("yes"):
 				
 				#Renew token because the report is a long process
 				#renew token
-				url = "https://iqvia.jamfcloud.com/api/v1/auth/keep-alive"
+				url = JAMF_url+"/api/v1/auth/keep-alive"
 				
 				token = http.post(url, headers=btHeaders)
 				
@@ -2236,7 +2236,7 @@ if get_JAMF_Computers_Info == ("yes"):
 				
 				#Renew token because the report is a long process
 				#renew token
-				url = "https://iqvia.jamfcloud.com/api/v1/auth/keep-alive"
+				url = JAMF_url+"/api/v1/auth/keep-alive"
 				
 				token = http.post(url, headers=btHeaders)
 				
@@ -2572,7 +2572,7 @@ if get_JAMF_Computers_Info == ("yes"):
 					
 					#Renew token because the report is a long process
 					#renew token
-					url = "https://iqvia.jamfcloud.com/api/v1/auth/keep-alive"
+					url = JAMF_url+"/api/v1/auth/keep-alive"
 					
 					token = http.post(url, headers=btHeaders)
 					
@@ -2653,7 +2653,7 @@ if get_JAMF_Computers_Info == ("yes"):
 					
 					#Renew token because the report is a long process
 					#renew token
-					url = "https://iqvia.jamfcloud.com/api/v1/auth/keep-alive"
+					url = JAMF_url+"/api/v1/auth/keep-alive"
 					
 					token = http.post(url, headers=btHeaders)
 					
