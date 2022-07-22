@@ -360,7 +360,7 @@ headers = {
 }
 
 
-DEFAULT_TIMEOUT = 5 # seconds
+DEFAULT_TIMEOUT = 15 # seconds
 
 class TimeoutHTTPAdapter(HTTPAdapter):
 	def __init__(self, *args, **kwargs):
@@ -2753,6 +2753,19 @@ if get_JAMF_Policy_Info == ("yes"):
 	# Process Policy List and get information linked to policies
 	for policy in policies:
 		
+		#Renew token because the report is a long process
+		#renew token
+		url = JAMF_url+"/api/v1/auth/keep-alive"
+		
+		token = http.post(url, headers=btHeaders)
+		
+		bearer = token.json()['token']
+		
+		btHeaders = {
+			'Accept': 'application/json',
+			'Authorization': 'Bearer '+bearer
+		}
+		
 		# Get Policy ID to do JAMF API lookup
 		PolicyID = str(policy['id']) 
 		
@@ -3233,6 +3246,19 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 	# Process Configuration Profile List and get information linked to Configuration Profiles
 	for configurationProfile in configurationProfiles:
 		
+		#Renew token because the report is a long process
+		#renew token
+		url = JAMF_url+"/api/v1/auth/keep-alive"
+		
+		token = http.post(url, headers=btHeaders)
+		
+		bearer = token.json()['token']
+		
+		btHeaders = {
+			'Accept': 'application/json',
+			'Authorization': 'Bearer '+bearer
+		}
+		
 		# Get configurationProfile ID to do JAMF API lookup
 		configurationProfileID = str(configurationProfile['id']) 
 	
@@ -3544,6 +3570,19 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 
 	for policy in policyRecords:
 		
+		#Renew token because the report is a long process
+		#renew token
+		url = JAMF_url+"/api/v1/auth/keep-alive"
+		
+		token = http.post(url, headers=btHeaders)
+		
+		bearer = token.json()['token']
+		
+		btHeaders = {
+			'Accept': 'application/json',
+			'Authorization': 'Bearer '+bearer
+		}
+		
 		# Get Policy ID to do JAMF API lookup 
 		policyRecordsID = str(policy['id']) 
 		
@@ -3624,6 +3663,19 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 		
 		for results in preStagePolicies:
 			
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
 			preStagePoliciesID = results['id']
 			packages = results['customPackageIds']
 			preStagePoliciesDisplayName = results['displayName']
@@ -3677,6 +3729,19 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 	
 	#process package records and set dict and list
 	for package in packageRecords:
+		
+		#Renew token because the report is a long process
+		#renew token
+		url = JAMF_url+"/api/v1/auth/keep-alive"
+		
+		token = http.post(url, headers=btHeaders)
+		
+		bearer = token.json()['token']
+		
+		btHeaders = {
+			'Accept': 'application/json',
+			'Authorization': 'Bearer '+bearer
+		}
 		
 		packageRecordsID = package['id']
 		packageRecordsName = package['name']
@@ -4085,6 +4150,19 @@ if get_JAMF_Script_To_Policy_Info == ("yes"):
 	
 	for policy in policyRecords:
 		
+		#Renew token because the report is a long process
+		#renew token
+		url = JAMF_url+"/api/v1/auth/keep-alive"
+		
+		token = http.post(url, headers=btHeaders)
+		
+		bearer = token.json()['token']
+		
+		btHeaders = {
+			'Accept': 'application/json',
+			'Authorization': 'Bearer '+bearer
+		}
+		
 		# Get Policy ID to do JAMF API lookup 
 		policyRecordsID = str(policy['id']) 
 		
@@ -4166,6 +4244,19 @@ if get_JAMF_Script_To_Policy_Info == ("yes"):
 	
 	#process Script records and set dict and list
 	for Script in ScriptRecords:
+		
+		#Renew token because the report is a long process
+		#renew token
+		url = JAMF_url+"/api/v1/auth/keep-alive"
+		
+		token = http.post(url, headers=btHeaders)
+		
+		bearer = token.json()['token']
+		
+		btHeaders = {
+			'Accept': 'application/json',
+			'Authorization': 'Bearer '+bearer
+		}
 		
 		ScriptRecordsID = Script['id']
 		ScriptRecordsName = Script['name']
