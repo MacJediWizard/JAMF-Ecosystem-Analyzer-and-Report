@@ -1994,6 +1994,9 @@ if get_JAMF_Computers_Info == ("yes"):
 			##########################################################################################		
 			# Get info for Hardware	
 			##########################################################################################
+			# Get info for Policies
+			print(".......Getting Hardware Info for Computer ID: " + getMycomputerRecordGeneralID)
+			
 			formatMyComputerRecordHardwareOSBuild = f"\"{mycomputerRecordHardware['os_build']}\""
 			
 			appendDataToCVS_JAMF_Computers_Hardware_Info = "{'Type':'Computer Hardware Info',\
@@ -2028,6 +2031,8 @@ if get_JAMF_Computers_Info == ("yes"):
 			##########################################################################################		
 			# Get info for FileVautl2	
 			##########################################################################################
+			print(".......Getting FileVault Info for Computer ID: " + getMycomputerRecordGeneralID)
+			
 			for FileVault2User in mycomputerRecordHardwareFileVault2Users :
 				
 				appendDataToCVS_JAMF_Computers_FileVault2_Info = "{'Type':'Computer Hardware FileVault2 Info',\
@@ -2052,6 +2057,8 @@ if get_JAMF_Computers_Info == ("yes"):
 			##########################################################################################		
 			# Get info for Local Accounts	
 			##########################################################################################
+			print(".......Getting Local Account Info for Computer ID: " + getMycomputerRecordGeneralID)
+			
 			for computerLocalAccount in mycomputerRecordHardwareLocalAccounts:
 				
 				# Put current data into variable to filter
@@ -2091,9 +2098,24 @@ if get_JAMF_Computers_Info == ("yes"):
 								verifyLocalAccount = response.json()
 								
 							except HTTPError as http_err:
-								print(f'HTTP error occurred: {http_err}')
+								# Process HTTP Error
+								check_http_err = str(http_err)
+								split_My_http_err = check_http_err.split()
+								
+								myHttpError = split_My_http_err[0]
+								myMissingRecordID = filterComputerLocalAccountData
+								myMissingRecordURL = split_My_http_err[5]
+								
+								if myHttpError == '404':
+									print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+									
+								else:
+									print(f'HTTP error occurred: {http_err}')
+									
+								continue
 							except Exception as err:
 								print(f'Other error occurred: {err}')
+								continue
 								
 								
 							# For Testing
@@ -2147,11 +2169,15 @@ if get_JAMF_Computers_Info == ("yes"):
 			##########################################################################################		
 			# Get info for Computer Group Membership	
 			##########################################################################################
+			print(".......Getting Computer Group Info for Computer ID: " + getMycomputerRecordGeneralID)
+			
 			#Get Info from record
 			computerGroupMembershipRecords = mycomputerRecordComputerGroupMembership
 			
 			#Get Computer Group Info
 			for group in computerGroupMembershipRecords:
+				
+				print(f"..............Working on Computer Group: {group}, for Computer ID: " + getMycomputerRecordGeneralID)
 				
 				#Renew token because the report is a long process
 				#renew token
@@ -2183,9 +2209,26 @@ if get_JAMF_Computers_Info == ("yes"):
 					resp = computerGroupMembershipNameResponse.json()
 					
 				except HTTPError as http_err:
-					print(f'HTTP error occurred: {http_err}')
+					
+					# Process HTTP Error
+					check_http_err = str(http_err)
+					split_My_http_err = check_http_err.split()
+				
+					myHttpError = split_My_http_err[0]
+					myMissingRecordID = computerGroupMembershipName
+					myMissingRecordURL = split_My_http_err[5]
+					
+					if myHttpError == '404':
+						print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+						
+					else:
+						print(f'HTTP error occurred: {http_err}')
+						
+					continue
+					
 				except Exception as err:
-					print(f'Other error occurred: {err}')	
+					print(f'Other error occurred: {err}')
+					continue
 					
 				#For Testing
 				#print(resp)
@@ -2228,12 +2271,13 @@ if get_JAMF_Computers_Info == ("yes"):
 			##########################################################################################		
 			# Get info for Computer Configuration Profile Membership	
 			##########################################################################################
+			print(".......Working on Configuration Profile Membership for Computer ID: " + getMycomputerRecordGeneralID)
+			
 			#Get Info from record
 			computerConfigurationProfileMembership = mycomputerConfigurationProfileMembership
 			
 			#Get Computer Group Info
 			for ConfigProfile in computerConfigurationProfileMembership:
-				
 				#Renew token because the report is a long process
 				#renew token
 				url = JAMF_url+"/api/v1/auth/keep-alive"
@@ -2250,6 +2294,7 @@ if get_JAMF_Computers_Info == ("yes"):
 				
 				if ConfigProfile['id'] > 0:
 					configurationProfileID = str(ConfigProfile['id'])
+					print(f"..............Working on Configuration Profile ID: {configurationProfileID}, for Computer ID: " + getMycomputerRecordGeneralID)
 					
 					#For testing
 					#print(configurationProfileID)
@@ -2265,7 +2310,21 @@ if get_JAMF_Computers_Info == ("yes"):
 						resp = computerConfigurationProfileMembershipResponse.json()
 						
 					except HTTPError as http_err:
-						print(f'HTTP error occurred: {http_err}')
+						
+						# Process HTTP Error
+						check_http_err = str(http_err)
+						split_My_http_err = check_http_err.split()
+						
+						myHttpError = split_My_http_err[0]
+						myMissingRecordID = configurationProfileID
+						myMissingRecordURL = split_My_http_err[5]
+						
+						if myHttpError == '404':
+							print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+							
+						else:
+							print(f'HTTP error occurred: {http_err}')
+							
 						continue
 					except Exception as err:
 						print(f'Other error occurred: {err}')
@@ -2508,9 +2567,24 @@ if get_JAMF_Computers_Info == ("yes"):
 									verifyLocalAccount = response.json()
 									
 								except HTTPError as http_err:
-									print(f'HTTP error occurred: {http_err}')
+									# Process HTTP Error
+									check_http_err = str(http_err)
+									split_My_http_err = check_http_err.split()
+									
+									myHttpError = split_My_http_err[0]
+									myMissingRecordID = filterComputerLocalAccountData
+									myMissingRecordURL = split_My_http_err[5]
+									
+									if myHttpError == '404':
+										print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+										
+									else:
+										print(f'HTTP error occurred: {http_err}')
+										
+									continue
 								except Exception as err:
 									print(f'Other error occurred: {err}')
+									continue
 									
 								
 								# For Testing
@@ -2600,9 +2674,24 @@ if get_JAMF_Computers_Info == ("yes"):
 						resp = computerGroupMembershipNameResponse.json()
 						
 					except HTTPError as http_err:
-						print(f'HTTP error occurred: {http_err}')
+						# Process HTTP Error
+						check_http_err = str(http_err)
+						split_My_http_err = check_http_err.split()
+						
+						myHttpError = split_My_http_err[0]
+						myMissingRecordID = computerGroupMembershipName
+						myMissingRecordURL = split_My_http_err[5]
+						
+						if myHttpError == '404':
+							print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+							
+						else:
+							print(f'HTTP error occurred: {http_err}')
+							
+						continue
 					except Exception as err:
-						print(f'Other error occurred: {err}')	
+						print(f'Other error occurred: {err}')
+						continue
 						
 					#For Testing
 					#print(resp)
@@ -2682,7 +2771,20 @@ if get_JAMF_Computers_Info == ("yes"):
 							resp = computerConfigurationProfileMembershipResponse.json()
 							
 						except HTTPError as http_err:
-							print(f'HTTP error occurred: {http_err}')
+							# Process HTTP Error
+							check_http_err = str(http_err)
+							split_My_http_err = check_http_err.split()
+							
+							myHttpError = split_My_http_err[0]
+							myMissingRecordID = configurationProfileID
+							myMissingRecordURL = split_My_http_err[5]
+							
+							if myHttpError == '404':
+								print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+								
+							else:
+								print(f'HTTP error occurred: {http_err}')
+								
 							continue
 						except Exception as err:
 							print(f'Other error occurred: {err}')
@@ -2783,9 +2885,24 @@ if get_JAMF_Policy_Info == ("yes"):
 			getPolicy = response.json()
 			
 		except HTTPError as http_err:
-			print(f'HTTP error occurred: {http_err}')
+			# Process HTTP Error
+			check_http_err = str(http_err)
+			split_My_http_err = check_http_err.split()
+			
+			myHttpError = split_My_http_err[0]
+			myMissingRecordID = PolicyID
+			myMissingRecordURL = split_My_http_err[5]
+			
+			if myHttpError == '404':
+				print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+				
+			else:
+				print(f'HTTP error occurred: {http_err}')
+				
+			continue
 		except Exception as err:
 			print(f'Other error occurred: {err}')
+			continue
 		
 		# For Testing
 		#print(getPolicy)
@@ -2951,9 +3068,24 @@ if get_JAMF_Policy_Info == ("yes"):
 					getTargetGroupData = response.json()
 					
 				except HTTPError as http_err:
-					print(f'HTTP error occurred: {http_err}')
+					# Process HTTP Error
+					check_http_err = str(http_err)
+					split_My_http_err = check_http_err.split()
+					
+					myHttpError = split_My_http_err[0]
+					myMissingRecordID = targetGroupID
+					myMissingRecordURL = split_My_http_err[5]
+					
+					if myHttpError == '404':
+						print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+						
+					else:
+						print(f'HTTP error occurred: {http_err}')
+						
+					continue
 				except Exception as err:
 					print(f'Other error occurred: {err}')
+					continue
 					
 				
 				#Computer Group Element for Target Groups
@@ -3047,9 +3179,24 @@ if get_JAMF_Policy_Info == ("yes"):
 					getExclusionGroupData = response.json()
 					
 				except HTTPError as http_err:
-					print(f'HTTP error occurred: {http_err}')
+					# Process HTTP Error
+					check_http_err = str(http_err)
+					split_My_http_err = check_http_err.split()
+					
+					myHttpError = split_My_http_err[0]
+					myMissingRecordID = exclusionGroupID
+					myMissingRecordURL = split_My_http_err[5]
+					
+					if myHttpError == '404':
+						print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+						
+					else:
+						print(f'HTTP error occurred: {http_err}')
+						
+					continue
 				except Exception as err:
 					print(f'Other error occurred: {err}')
+					continue
 					
 				
 				myExclusionsComputerGroupInfo = getExclusionGroupData['computer_group']
@@ -3106,10 +3253,24 @@ if get_JAMF_Policy_Info == ("yes"):
 					getPackageData = response.json()
 					
 				except HTTPError as http_err:
-					print(f'HTTP error occurred: {http_err}')
+					# Process HTTP Error
+					check_http_err = str(http_err)
+					split_My_http_err = check_http_err.split()
+					
+					myHttpError = split_My_http_err[0]
+					myMissingRecordID = packageID
+					myMissingRecordURL = split_My_http_err[5]
+					
+					if myHttpError == '404':
+						print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+						
+					else:
+						print(f'HTTP error occurred: {http_err}')
+						
+					continue
 				except Exception as err:
 					print(f'Other error occurred: {err}')
-					
+					continue					
 				
 				myPackageInfo = getPackageData['package']
 				
@@ -3169,9 +3330,24 @@ if get_JAMF_Policy_Info == ("yes"):
 					getScriptData = response.json()
 					
 				except HTTPError as http_err:
-					print(f'HTTP error occurred: {http_err}')
+					# Process HTTP Error
+					check_http_err = str(http_err)
+					split_My_http_err = check_http_err.split()
+					
+					myHttpError = split_My_http_err[0]
+					myMissingRecordID = scriptID
+					myMissingRecordURL = split_My_http_err[5]
+					
+					if myHttpError == '404':
+						print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+						
+					else:
+						print(f'HTTP error occurred: {http_err}')
+						
+					continue
 				except Exception as err:
 					print(f'Other error occurred: {err}')
+					continue
 					
 				
 				myScriptInfo = getScriptData['script']
@@ -3276,9 +3452,24 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 			getConfigurationProfile = response.json()
 			
 		except HTTPError as http_err:
-			print(f'HTTP error occurred: {http_err}')
+			# Process HTTP Error
+			check_http_err = str(http_err)
+			split_My_http_err = check_http_err.split()
+			
+			myHttpError = split_My_http_err[0]
+			myMissingRecordID = configurationProfileID
+			myMissingRecordURL = split_My_http_err[5]
+			
+			if myHttpError == '404':
+				print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+				
+			else:
+				print(f'HTTP error occurred: {http_err}')
+				
+			continue
 		except Exception as err:
 			print(f'Other error occurred: {err}')
+			continue
 			
 		
 		# For Testing
@@ -3397,9 +3588,24 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 					getTargetGroupData = response.json()
 					
 				except HTTPError as http_err:
-					print(f'HTTP error occurred: {http_err}')
+					# Process HTTP Error
+					check_http_err = str(http_err)
+					split_My_http_err = check_http_err.split()
+					
+					myHttpError = split_My_http_err[0]
+					myMissingRecordID = targetGroupID
+					myMissingRecordURL = split_My_http_err[5]
+					
+					if myHttpError == '404':
+						print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+						
+					else:
+						print(f'HTTP error occurred: {http_err}')
+						
+					continue
 				except Exception as err:
 					print(f'Other error occurred: {err}')
+					continue
 					
 				
 				#Computer Group Element for Target Groups
@@ -3495,9 +3701,24 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 					getExclusionGroupData = response.json()
 					
 				except HTTPError as http_err:
-					print(f'HTTP error occurred: {http_err}')
+					# Process HTTP Error
+					check_http_err = str(http_err)
+					split_My_http_err = check_http_err.split()
+					
+					myHttpError = split_My_http_err[0]
+					myMissingRecordID = exclusionGroupID
+					myMissingRecordURL = split_My_http_err[5]
+					
+					if myHttpError == '404':
+						print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+						
+					else:
+						print(f'HTTP error occurred: {http_err}')
+						
+					continue
 				except Exception as err:
 					print(f'Other error occurred: {err}')
+					continue
 					
 				
 				myExclusionsComputerGroupInfo = getExclusionGroupData['computer_group']
@@ -3600,9 +3821,24 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 			getPolicyRecords = PolicyRecordsResponse.json()
 			
 		except HTTPError as http_err:
-			print(f'HTTP error occurred: {http_err}')
+			# Process HTTP Error
+			check_http_err = str(http_err)
+			split_My_http_err = check_http_err.split()
+			
+			myHttpError = split_My_http_err[0]
+			myMissingRecordID = policyRecordsID
+			myMissingRecordURL = split_My_http_err[5]
+			
+			if myHttpError == '404':
+				print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+				
+			else:
+				print(f'HTTP error occurred: {http_err}')
+				
+			continue
 		except Exception as err:
 			print(f'Other error occurred: {err}')
+			continue
 			
 		# For Testing
 		#print(getPolicyRecords)
@@ -3785,9 +4021,24 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 						getMyPackageRecords = myPackageRecordsResponse.json()
 						
 					except HTTPError as http_err:
-						print(f'HTTP error occurred: {http_err}')
+						# Process HTTP Error
+						check_http_err = str(http_err)
+						split_My_http_err = check_http_err.split()
+						
+						myHttpError = split_My_http_err[0]
+						myMissingRecordID = str(packageRecordsID)
+						myMissingRecordURL = split_My_http_err[5]
+						
+						if myHttpError == '404':
+							print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+							
+						else:
+							print(f'HTTP error occurred: {http_err}')
+							
+						continue
 					except Exception as err:
 						print(f'Other error occurred: {err}')
+						continue
 						
 					# for testing
 					#print(getMyPackageRecords['package']['id'])
@@ -3857,9 +4108,25 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 						getMyPackageRecords = myPackageRecordsResponse.json()
 						
 					except HTTPError as http_err:
-						print(f'HTTP error occurred: {http_err}')
+						# Process HTTP Error
+						check_http_err = str(http_err)
+						split_My_http_err = check_http_err.split()
+						
+						myHttpError = split_My_http_err[0]
+						myMissingRecordID = str(packageRecordsID)
+						myMissingRecordURL = split_My_http_err[5]
+						
+						if myHttpError == '404':
+							print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+							
+						else:
+							print(f'HTTP error occurred: {http_err}')
+							
+						continue
 					except Exception as err:
 						print(f'Other error occurred: {err}')
+						continue
+					
 						
 						
 					#print(getMyPackageRecords['package']['id'])
@@ -3933,9 +4200,25 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 						getMyPackageRecords = myPackageRecordsResponse.json()
 						
 					except HTTPError as http_err:
-						print(f'HTTP error occurred: {http_err}')
+						# Process HTTP Error
+						check_http_err = str(http_err)
+						split_My_http_err = check_http_err.split()
+						
+						myHttpError = split_My_http_err[0]
+						myMissingRecordID = str(packageRecordsID)
+						myMissingRecordURL = split_My_http_err[5]
+						
+						if myHttpError == '404':
+							print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+							
+						else:
+							print(f'HTTP error occurred: {http_err}')
+							
+						continue
 					except Exception as err:
 						print(f'Other error occurred: {err}')
+						continue
+					
 						
 					# for testing
 					#print(getMyPackageRecords['package']['id'])
@@ -4007,9 +4290,25 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 						getMyPackageRecords = myPackageRecordsResponse.json()
 						
 					except HTTPError as http_err:
-						print(f'HTTP error occurred: {http_err}')
+						# Process HTTP Error
+						check_http_err = str(http_err)
+						split_My_http_err = check_http_err.split()
+						
+						myHttpError = split_My_http_err[0]
+						myMissingRecordID = str(packageRecordsID)
+						myMissingRecordURL = split_My_http_err[5]
+						
+						if myHttpError == '404':
+							print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+							
+						else:
+							print(f'HTTP error occurred: {http_err}')
+							
+						continue
 					except Exception as err:
 						print(f'Other error occurred: {err}')
+						continue
+					
 						
 						
 					#print(getMyPackageRecords['package']['id'])
@@ -4180,9 +4479,24 @@ if get_JAMF_Script_To_Policy_Info == ("yes"):
 			getPolicyRecords = PolicyRecordsResponse.json()
 			
 		except HTTPError as http_err:
-			print(f'HTTP error occurred: {http_err}')
+			# Process HTTP Error
+			check_http_err = str(http_err)
+			split_My_http_err = check_http_err.split()
+			
+			myHttpError = split_My_http_err[0]
+			myMissingRecordID = policyRecordsID
+			myMissingRecordURL = split_My_http_err[5]
+			
+			if myHttpError == '404':
+				print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+				
+			else:
+				print(f'HTTP error occurred: {http_err}')
+				
+			continue
 		except Exception as err:
 			print(f'Other error occurred: {err}')
+			continue
 			
 		# For Testing
 		#print(getPolicyRecords)
@@ -4300,9 +4614,24 @@ if get_JAMF_Script_To_Policy_Info == ("yes"):
 						getMyScriptRecords = myScriptRecordsResponse.json()
 						
 					except HTTPError as http_err:
-						print(f'HTTP error occurred: {http_err}')
+						# Process HTTP Error
+						check_http_err = str(http_err)
+						split_My_http_err = check_http_err.split()
+						
+						myHttpError = split_My_http_err[0]
+						myMissingRecordID = str(ScriptRecordsID)
+						myMissingRecordURL = split_My_http_err[5]
+						
+						if myHttpError == '404':
+							print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+							
+						else:
+							print(f'HTTP error occurred: {http_err}')
+							
+						continue
 					except Exception as err:
 						print(f'Other error occurred: {err}')
+						continue
 						
 					# for testing
 					#print(getMyScriptRecords['script']['id'])
@@ -4362,9 +4691,24 @@ if get_JAMF_Script_To_Policy_Info == ("yes"):
 				getMyScriptRecords = myScriptRecordsResponse.json()
 				
 			except HTTPError as http_err:
-				print(f'HTTP error occurred: {http_err}')
+				# Process HTTP Error
+				check_http_err = str(http_err)
+				split_My_http_err = check_http_err.split()
+				
+				myHttpError = split_My_http_err[0]
+				myMissingRecordID = str(ScriptRecordsID)
+				myMissingRecordURL = split_My_http_err[5]
+				
+				if myHttpError == '404':
+					print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+					
+				else:
+					print(f'HTTP error occurred: {http_err}')
+					
+				continue
 			except Exception as err:
 				print(f'Other error occurred: {err}')
+				continue
 				
 			# for testing
 			#print(getMyScriptRecords['script']['id'])
