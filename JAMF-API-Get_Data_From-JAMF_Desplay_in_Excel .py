@@ -275,7 +275,9 @@ from requests.auth import HTTPBasicAuth
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from requests.exceptions import HTTPError
-
+# New MultiThread libraries
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 
 #For CSV processing with Pandas Library
 try:
@@ -379,7 +381,7 @@ class TimeoutHTTPAdapter(HTTPAdapter):
 	
 # Retry for requests
 retry_strategy = Retry(
-	total=10,
+	total=25,
 	backoff_factor=1,
 	status_forcelist=[204, 413, 429, 500, 502, 503, 504],
 	allowed_methods=["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE", "POST", "HTTP"]
@@ -2174,35 +2176,138 @@ if get_JAMF_Computers_Info == ("yes"):
 			#Get Info from record
 			computerGroupMembershipRecords = mycomputerRecordComputerGroupMembership
 			
-			#Get Computer Group Info
-			for group in computerGroupMembershipRecords:
+#			#Get Computer Group Info
+#			for group in computerGroupMembershipRecords:
+#				
+#				print(f"..............Working on Computer Group: {group}, for Computer ID: " + getMycomputerRecordGeneralID)
+#				
+#				#Renew token because the report is a long process
+#				#renew token
+#				url = JAMF_url+"/api/v1/auth/keep-alive"
+#				
+#				token = http.post(url, headers=btHeaders)
+#				
+#				bearer = token.json()['token']
+#				
+#				btHeaders = {
+#					'Accept': 'application/json',
+#					'Authorization': 'Bearer '+bearer
+#				}
+#				
+#				
+#				#only need group name for list
+#				computerGroupMembershipName = group
+#				
+#				#do look up for each name interation
+#				# Lookup group info by computer id
+#				url = JAMF_url + "/JSSResource/computergroups/name/" + computerGroupMembershipName
+#				
+#				
+#				try:
+#					computerGroupMembershipNameResponse = http.get(url, headers=btHeaders)
+#					
+#					computerGroupMembershipNameResponse.raise_for_status()
+#					
+#					resp = computerGroupMembershipNameResponse.json()
+#					
+#				except HTTPError as http_err:
+#					
+#					# Process HTTP Error
+#					check_http_err = str(http_err)
+#					split_My_http_err = check_http_err.split()
+#				
+#					myHttpError = split_My_http_err[0]
+#					myMissingRecordID = computerGroupMembershipName
+#					myMissingRecordURL = split_My_http_err[5]
+#					
+#					if myHttpError == '404':
+#						print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+#						
+#					else:
+#						print(f'HTTP error occurred: {http_err}')
+#						
+#					continue
+#					
+#				except Exception as err:
+#					print(f'Other error occurred: {err}')
+#					continue
+#					
+#				#For Testing
+#				#print(resp)
+#					
+#				#Set Variables if Data Available
+#				if len(str(resp['computer_group']['id'])) == 0:
+#					mygroupMembershipId = ''
+#				else:
+#					mygroupMembershipId = int(resp['computer_group']['id'])	
+#					
+#					
+#				groupMembershipName = resp['computer_group']['name']
+#				groupMembershipIsSmart = resp['computer_group']['is_smart']
+#			
+#				appendDataToCVS_JAMF_Computers_Info_Computer_Group_Membership = "{'Type':'Computer Group Membership Info',\
+#				\
+#				'Computer ID':mycomputerRecordGeneralID,\
+#				\
+#				'Computer Name':mycomputerRecordGeneral['name'],\
+#				\
+#				'Computer Group Membership Group ID':mygroupMembershipId,\
+#				\
+#				'Computer Group Membership Group Name':groupMembershipName,\
+#				\
+#				'Computer Group Membership Group Is Smart':groupMembershipIsSmart}"
+#			
+#			
+#				appendJAMF_Computers_Info_Computer_Group_Membership = eval(appendDataToCVS_JAMF_Computers_Info_Computer_Group_Membership)
+#				appendComputerGroupMembershipColumns = appendJAMF_Computers_Info_Computer_Group_Membership
+#			
+#				#Set Columns	
+#				Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, appendComputerGroupMembershipColumns, computerConfigurationProfileMembershipColumns)
+#			
+#				#Set CSV File
+#				dataToCsvComputers.append(Combined)
 				
-				print(f"..............Working on Computer Group: {group}, for Computer ID: " + getMycomputerRecordGeneralID)
-				
-				#Renew token because the report is a long process
-				#renew token
-				url = JAMF_url+"/api/v1/auth/keep-alive"
-				
-				token = http.post(url, headers=btHeaders)
-				
-				bearer = token.json()['token']
-				
-				btHeaders = {
-					'Accept': 'application/json',
-					'Authorization': 'Bearer '+bearer
-				}
+			# Start New MultiProcess Code here
+			
+			list_of_groups = []
+			
+			for groupName in computerGroupMembershipRecords :
+				list_of_groups.append(f'{groupName}')
 				
 				
-				#only need group name for list
-				computerGroupMembershipName = group
+			# Renew token because the report is a long process
+			# renew token
+			tokenURL = JAMF_url + "/api/v1/auth/keep-alive"
+			
+			token = http.post(tokenURL, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
+			def get_clean_List(url, groups):
 				
-				#do look up for each name interation
-				# Lookup group info by computer id
-				url = JAMF_url + "/JSSResource/computergroups/name/" + computerGroupMembershipName
+				myURL = (f"{url}/JSSResource/computergroups/name/{groups}")
 				
+				test = requests.get(myURL, headers=btHeaders)
+				
+				if test.status_code != 200:
+					list_of_groups.remove(groups)
+					
+				
+			def get_url(url, groups):
+				
+				print(f"..............Working on Computer Group: {groups}, for Computer ID: " + getMycomputerRecordGeneralID)
+				
+				myURL = (f"{url}/JSSResource/computergroups/name/{groups}")
 				
 				try:
-					computerGroupMembershipNameResponse = http.get(url, headers=btHeaders)
+					
+					computerGroupMembershipNameResponse = http.get(myURL, headers=btHeaders)
 					
 					computerGroupMembershipNameResponse.raise_for_status()
 					
@@ -2213,9 +2318,9 @@ if get_JAMF_Computers_Info == ("yes"):
 					# Process HTTP Error
 					check_http_err = str(http_err)
 					split_My_http_err = check_http_err.split()
-				
+					
 					myHttpError = split_My_http_err[0]
-					myMissingRecordID = computerGroupMembershipName
+					myMissingRecordID = groups
 					myMissingRecordURL = split_My_http_err[5]
 					
 					if myHttpError == '404':
@@ -2224,14 +2329,9 @@ if get_JAMF_Computers_Info == ("yes"):
 					else:
 						print(f'HTTP error occurred: {http_err}')
 						
-					continue
-					
 				except Exception as err:
 					print(f'Other error occurred: {err}')
-					continue
 					
-				#For Testing
-				#print(resp)
 					
 				#Set Variables if Data Available
 				if len(str(resp['computer_group']['id'])) == 0:
@@ -2244,17 +2344,61 @@ if get_JAMF_Computers_Info == ("yes"):
 				groupMembershipIsSmart = resp['computer_group']['is_smart']
 				
 				
+				return mygroupMembershipId, groupMembershipName, groupMembershipIsSmart
+			
+		
+			# Clean List
+			with ThreadPoolExecutor(max_workers=100) as pool:
+				get_data = partial(get_clean_List, JAMF_url)
+				list(pool.map(get_data,list_of_groups))
+				
+				
+			#print(list_of_groups)	
+				
+				
+			# Process List	
+			with ThreadPoolExecutor(max_workers=100) as pool:
+				get_data = partial(get_url, JAMF_url)
+				response_list = list(pool.map(get_data,list_of_groups))
+			
+				#print(response_list)
+
+
+			# Renew token because the report is a long process
+			# renew token
+			tokenURL = JAMF_url + "/api/v1/auth/keep-alive"
+			
+			token = http.post(tokenURL, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
+			for response in response_list:
+				# Make sure to refresh variables for each loop
+				myComputerID = mycomputerRecordGeneralID
+				myComputerName = mycomputerRecordGeneral['name']
+				myGroupMemberID = response[0] 
+				myGroupMemberName = response[1] 
+				myGroupIsSmart = response[2]
+				
+				#print(f"My Group info: {response}")	
+				
 				appendDataToCVS_JAMF_Computers_Info_Computer_Group_Membership = "{'Type':'Computer Group Membership Info',\
 				\
-				'Computer ID':mycomputerRecordGeneralID,\
+				'Computer ID':myComputerID,\
 				\
-				'Computer Name':mycomputerRecordGeneral['name'],\
+				'Computer Name':myComputerName,\
 				\
-				'Computer Group Membership Group ID':mygroupMembershipId,\
+				'Computer Group Membership Group ID':myGroupMemberID,\
 				\
-				'Computer Group Membership Group Name':groupMembershipName,\
+				'Computer Group Membership Group Name':myGroupMemberName,\
 				\
-				'Computer Group Membership Group Is Smart':groupMembershipIsSmart}"
+				'Computer Group Membership Group Is Smart':myGroupIsSmart}"
 				
 				
 				appendJAMF_Computers_Info_Computer_Group_Membership = eval(appendDataToCVS_JAMF_Computers_Info_Computer_Group_Membership)
@@ -2276,94 +2420,203 @@ if get_JAMF_Computers_Info == ("yes"):
 			#Get Info from record
 			computerConfigurationProfileMembership = mycomputerConfigurationProfileMembership
 			
-			#Get Computer Group Info
-			for ConfigProfile in computerConfigurationProfileMembership:
-				#Renew token because the report is a long process
-				#renew token
-				url = JAMF_url+"/api/v1/auth/keep-alive"
-				
-				token = http.post(url, headers=btHeaders)
-				
-				bearer = token.json()['token']
-				
-				btHeaders = {
-					'Accept': 'application/json',
-					'Authorization': 'Bearer '+bearer
-				}
-				
-				
+#			#Get Computer Group Info
+#			for ConfigProfile in computerConfigurationProfileMembership:
+#				#Renew token because the report is a long process
+#				#renew token
+#				url = JAMF_url+"/api/v1/auth/keep-alive"
+#				
+#				token = http.post(url, headers=btHeaders)
+#				
+#				bearer = token.json()['token']
+#				
+#				btHeaders = {
+#					'Accept': 'application/json',
+#					'Authorization': 'Bearer '+bearer
+#				}
+#				
+#				
+#				if ConfigProfile['id'] > 0:
+#					configurationProfileID = str(ConfigProfile['id'])
+#					print(f"..............Working on Configuration Profile ID: {configurationProfileID}, for Computer ID: " + getMycomputerRecordGeneralID)
+#					
+#					#For testing
+#					#print(configurationProfileID)
+#					
+#					# Set up url for getting information from each configurationProfile ID from JAMF API
+#					url = JAMF_url + "/JSSResource/osxconfigurationprofiles/id/" + configurationProfileID
+#					
+#					try:
+#						computerConfigurationProfileMembershipResponse = http.get(url, headers=btHeaders)
+#						
+#						computerConfigurationProfileMembershipResponse.raise_for_status()
+#						
+#						resp = computerConfigurationProfileMembershipResponse.json()
+#						
+#					except HTTPError as http_err:
+#						
+#						# Process HTTP Error
+#						check_http_err = str(http_err)
+#						split_My_http_err = check_http_err.split()
+#						
+#						myHttpError = split_My_http_err[0]
+#						myMissingRecordID = configurationProfileID
+#						myMissingRecordURL = split_My_http_err[5]
+#						
+#						if myHttpError == '404':
+#							print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+#							
+#						else:
+#							print(f'HTTP error occurred: {http_err}')
+#							
+#						continue
+#					except Exception as err:
+#						print(f'Other error occurred: {err}')
+#						continue
+#					
+#					#For Testing
+#					#print(resp) 
+#					
+#					#General Element for ID and Catagory
+#					myConfigurationProfileGeneral = resp['os_x_configuration_profile']['general']
+#					myConfigurationProfileGeneralID = myConfigurationProfileGeneral['id']
+#					myConfigurationProfileGeneralName = myConfigurationProfileGeneral['name']
+#					
+#					#For Testing
+##					print(myConfigurationProfileGeneral)
+##					print(myConfigurationProfileGeneralID)
+##					print(myConfigurationProfileGeneralName)
+#					
+#					
+#					appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership = "{'Type':'Computer Configuration Profile Membership Info',\
+#					\
+#					'Computer ID':mycomputerRecordGeneralID,\
+#					\
+#					'Computer Name':mycomputerRecordGeneral['name'],\
+#					\
+#					'Computer Configuration Profile Membership ID':myConfigurationProfileGeneralID,\
+#					\
+#					'Computer Configuration Profile Membership Name':myConfigurationProfileGeneralName}"
+#					
+#					
+#					appendJAMF_Computers_Info_Computer_Configuration_Profile_Membership = eval(appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership)
+#					appendComputerConfigurationProfileMembershipColumns = appendJAMF_Computers_Info_Computer_Configuration_Profile_Membership
+#					
+#					#Set Columns	
+#					Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns, appendComputerConfigurationProfileMembershipColumns)
+#					
+#					#Set CSV File
+#					dataToCsvComputers.append(Combined)
+			
+			# Start New MultiProcess Code here
+			
+			list_of_config_profiles_ID = []
+			
+			for ConfigProfile in computerConfigurationProfileMembership :
 				if ConfigProfile['id'] > 0:
 					configurationProfileID = str(ConfigProfile['id'])
-					print(f"..............Working on Configuration Profile ID: {configurationProfileID}, for Computer ID: " + getMycomputerRecordGeneralID)
-					
-					#For testing
-					#print(configurationProfileID)
-					
-					# Set up url for getting information from each configurationProfile ID from JAMF API
-					url = JAMF_url + "/JSSResource/osxconfigurationprofiles/id/" + configurationProfileID
-					
-					try:
-						computerConfigurationProfileMembershipResponse = http.get(url, headers=btHeaders)
-						
-						computerConfigurationProfileMembershipResponse.raise_for_status()
-						
-						resp = computerConfigurationProfileMembershipResponse.json()
-						
-					except HTTPError as http_err:
-						
-						# Process HTTP Error
-						check_http_err = str(http_err)
-						split_My_http_err = check_http_err.split()
-						
-						myHttpError = split_My_http_err[0]
-						myMissingRecordID = configurationProfileID
-						myMissingRecordURL = split_My_http_err[5]
-						
-						if myHttpError == '404':
-							print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
-							
-						else:
-							print(f'HTTP error occurred: {http_err}')
-							
-						continue
-					except Exception as err:
-						print(f'Other error occurred: {err}')
-						continue
-					
-					#For Testing
-					#print(resp) 
-					
-					#General Element for ID and Catagory
-					myConfigurationProfileGeneral = resp['os_x_configuration_profile']['general']
-					myConfigurationProfileGeneralID = myConfigurationProfileGeneral['id']
-					myConfigurationProfileGeneralName = myConfigurationProfileGeneral['name']
-					
-					#For Testing
-#					print(myConfigurationProfileGeneral)
-#					print(myConfigurationProfileGeneralID)
-#					print(myConfigurationProfileGeneralName)
+					list_of_config_profiles_ID.append(f'{configurationProfileID}')
 					
 					
-					appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership = "{'Type':'Computer Configuration Profile Membership Info',\
-					\
-					'Computer ID':mycomputerRecordGeneralID,\
-					\
-					'Computer Name':mycomputerRecordGeneral['name'],\
-					\
-					'Computer Configuration Profile Membership ID':myConfigurationProfileGeneralID,\
-					\
-					'Computer Configuration Profile Membership Name':myConfigurationProfileGeneralName}"
-					
-					
-					appendJAMF_Computers_Info_Computer_Configuration_Profile_Membership = eval(appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership)
-					appendComputerConfigurationProfileMembershipColumns = appendJAMF_Computers_Info_Computer_Configuration_Profile_Membership
-					
-					#Set Columns	
-					Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns, appendComputerConfigurationProfileMembershipColumns)
-					
-					#Set CSV File
-					dataToCsvComputers.append(Combined)
+			def get_clean_List(url, configProfiles):
 				
+				myURL = (f"{url}/JSSResource/osxconfigurationprofiles/id/{configProfiles}")
+				
+				test = requests.get(myURL, headers=headers, auth = HTTPBasicAuth(username, password))
+				
+				if test.status_code != 200:
+					list_of_config_profiles_ID.remove(configProfiles)
+					
+					
+			def get_url(url, configProfiles):
+				
+				print(f"..............Working on Configuration Profile ID: {configProfiles}, for Computer ID: " + getMycomputerRecordGeneralID)
+				
+				myURL = (f"{url}/JSSResource/osxconfigurationprofiles/id/{configProfiles}")
+				
+				try:
+					
+					computerConfigurationProfileMembershipResponse = requests.get(myURL, headers=headers, auth = HTTPBasicAuth(username, password))
+					
+					computerConfigurationProfileMembershipResponse.raise_for_status()
+					
+					resp = computerConfigurationProfileMembershipResponse.json()
+					
+				except HTTPError as http_err:
+					
+					# Process HTTP Error
+					check_http_err = str(http_err)
+					split_My_http_err = check_http_err.split()
+					
+					myHttpError = split_My_http_err[0]
+					myMissingRecordID = configProfiles
+					myMissingRecordURL = split_My_http_err[5]
+					
+					if myHttpError == '404':
+						print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+						
+					else:
+						print(f'HTTP error occurred: {http_err}')
+						
+				except Exception as err:
+					print(f'Other error occurred: {err}')
+					
+					
+				#General Element for ID and Catagory
+				myConfigurationProfileGeneral = resp['os_x_configuration_profile']['general']
+				myConfigurationProfileGeneralID = myConfigurationProfileGeneral['id']
+				myConfigurationProfileGeneralName = myConfigurationProfileGeneral['name']
+				
+				
+				return myConfigurationProfileGeneralID, myConfigurationProfileGeneralName
+			
+			
+			
+			# Clean List
+			with ThreadPoolExecutor(max_workers=100) as pool:
+				get_data = partial(get_clean_List, JAMF_url)
+				list(pool.map(get_data,list_of_config_profiles_ID))
+				
+				
+			#print(list_of_config_profiles_ID)	
+				
+			# Process List	
+			with ThreadPoolExecutor(max_workers=100) as pool:
+				get_data = partial(get_url, JAMF_url)
+				response_list = list(pool.map(get_data,list_of_config_profiles_ID))
+				
+			#print(response_list)
+				
+				
+			for response in response_list:
+				# Make sure to refresh variables for each loop
+				myComputerID = mycomputerRecordGeneralID
+				myComputerName = mycomputerRecordGeneral['name']
+				myConfigProfileID = response[0] 
+				myConfigProfileName = response[1] 
+			
+				#print(f"My Group info: {response}")
+			
+				appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership = "{'Type':'Computer Configuration Profile Membership Info',\
+				\
+				'Computer ID':myComputerID,\
+				\
+				'Computer Name':myComputerName,\
+				\
+				'Computer Configuration Profile Membership ID':myConfigProfileID,\
+				\
+				'Computer Configuration Profile Membership Name':myConfigProfileName}"
+				
+				
+				appendJAMF_Computers_Info_Computer_Configuration_Profile_Membership = eval(appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership)
+				appendComputerConfigurationProfileMembershipColumns = appendJAMF_Computers_Info_Computer_Configuration_Profile_Membership
+				
+				#Set Columns	
+				Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns, appendComputerConfigurationProfileMembershipColumns)
+				
+				#Set CSV File
+				dataToCsvComputers.append(Combined)
+			
 		
 	else:		
 		
