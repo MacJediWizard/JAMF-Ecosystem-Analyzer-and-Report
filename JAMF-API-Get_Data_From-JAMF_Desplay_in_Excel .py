@@ -278,6 +278,7 @@ from requests.exceptions import HTTPError
 # New MultiThread libraries
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
+import pandas.io.formats.excel
 
 #For CSV processing with Pandas Library
 try:
@@ -305,6 +306,15 @@ except ImportError:
 	time.sleep(3)
 	import xlsxwriter
 
+
+#For xml to dict processing. using where bad json response.
+try:
+	import xmltodict
+except ImportError:
+	os.system('pip3 install xmltodict')
+	time.sleep(3)
+	import xmltodict
+	
 
 ##########################################################################################
 # Variables
@@ -1041,11 +1051,26 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 		
 		includePreStagePackageToPolicyInfo = "yes"
 		
-	elif get_JAMF_Configuration_Profile_Info_Exclusions == ("no"):
+	elif get_JAMF_Policy_in_PreStage_Policy_Info == ("no"):
 		
 		print("\nNot Including PreStage Policy Info.\n\n")
 		
 		includePreStagePackageToPolicyInfo = "no"
+		
+		
+	print("\n******************** JAMF API Package To Policy in Patch Management Section. ********************\n")
+	get_JAMF_Policy_in_Patch_Management_Info = getYesOrNoInput("Do you want to include JAMF Package To Policy in Patch Management Info in Report? (yes or no): ")
+	if get_JAMF_Policy_in_Patch_Management_Info == ("yes"):
+		
+		print("\nIncluding Patch Management Info.\n\n")
+		
+		includePatchManagementPackageToPolicyInfo = "yes"
+		
+	elif get_JAMF_Policy_in_Patch_Management_Info == ("no"):
+		
+		print("\nNot Including Patch Management Info.\n\n")
+		
+		includePatchManagementPackageToPolicyInfo = "no"
 		
 		
 ##################################################
@@ -2293,7 +2318,7 @@ if get_JAMF_Computers_Info == ("yes"):
 				
 				myURL = (f"{url}/JSSResource/computergroups/name/{groups}")
 				
-				test = requests.get(myURL, headers=btHeaders)
+				test = http.get(myURL, headers=btHeaders)
 				
 				if test.status_code != 200:
 					list_of_groups.remove(groups)
@@ -2522,7 +2547,7 @@ if get_JAMF_Computers_Info == ("yes"):
 				
 				myURL = (f"{url}/JSSResource/osxconfigurationprofiles/id/{configProfiles}")
 				
-				test = requests.get(myURL, headers=headers, auth = HTTPBasicAuth(username, password))
+				test = http.get(myURL, headers=headers, auth = HTTPBasicAuth(username, password))
 				
 				if test.status_code != 200:
 					list_of_config_profiles_ID.remove(configProfiles)
@@ -2536,7 +2561,7 @@ if get_JAMF_Computers_Info == ("yes"):
 				
 				try:
 					
-					computerConfigurationProfileMembershipResponse = requests.get(myURL, headers=headers, auth = HTTPBasicAuth(username, password))
+					computerConfigurationProfileMembershipResponse = http.get(myURL, headers=headers, auth = HTTPBasicAuth(username, password))
 					
 					computerConfigurationProfileMembershipResponse.raise_for_status()
 					
@@ -2844,7 +2869,7 @@ if get_JAMF_Computers_Info == ("yes"):
 								#print(verifyLocalAccount)
 								
 								verifidLocalAccountRecords = verifyLocalAccount['ldap_users']
-								verifidLocalAccountRecords.sort(key=lambda item: item.get('id'), reverse=False)
+								#verifidLocalAccountRecords.sort(key=lambda item: item.get('id'), reverse=False)
 								
 								for localAccountRecord in verifidLocalAccountRecords :
 									
@@ -2891,48 +2916,153 @@ if get_JAMF_Computers_Info == ("yes"):
 				##########################################################################################		
 				# Get info for Computer Group Membership	
 				##########################################################################################
+				print(".......Getting Computer Group Info for Computer ID: " + getMycomputerRecordGeneralID)
+				
 				#Get Info from record
 				computerGroupMembershipRecords = mycomputerRecordComputerGroupMembership
 				
-				#Get Computer Group Info
-				for group in computerGroupMembershipRecords:
+#				#Get Computer Group Info
+#				for group in computerGroupMembershipRecords:
+#					
+#					#Renew token because the report is a long process
+#					#renew token
+#					url = JAMF_url+"/api/v1/auth/keep-alive"
+#					
+#					token = http.post(url, headers=btHeaders)
+#					
+#					bearer = token.json()['token']
+#					
+#					btHeaders = {
+#						'Accept': 'application/json',
+#						'Authorization': 'Bearer '+bearer
+#					}
+#					
+#					
+#					#only need group name for list
+#					computerGroupMembershipName = group
+#					
+#					#do look up for each name interation
+#					# Lookup group info by computer id
+#					url = JAMF_url + "/JSSResource/computergroups/name/" + computerGroupMembershipName
+#					
+#					
+#					try:
+#						computerGroupMembershipNameResponse = http.get(url, headers=btHeaders)
+#						
+#						computerGroupMembershipNameResponse.raise_for_status()
+#						
+#						resp = computerGroupMembershipNameResponse.json()
+#						
+#					except HTTPError as http_err:
+#						# Process HTTP Error
+#						check_http_err = str(http_err)
+#						split_My_http_err = check_http_err.split()
+#						
+#						myHttpError = split_My_http_err[0]
+#						myMissingRecordID = computerGroupMembershipName
+#						myMissingRecordURL = split_My_http_err[5]
+#						
+#						if myHttpError == '404':
+#							print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+#							
+#						else:
+#							print(f'HTTP error occurred: {http_err}')
+#							
+#						continue
+#					except Exception as err:
+#						print(f'Other error occurred: {err}')
+#						continue
+#						
+#					#For Testing
+#					#print(resp)
+#					
+#					#Set Variables if Data Available
+#					if len(str(resp['computer_group']['id'])) == 0:
+#						mygroupMembershipId = ''
+#					else:
+#						mygroupMembershipId = int(resp['computer_group']['id'])	
+#						
+#					
+#					groupMembershipName = resp['computer_group']['name']
+#					groupMembershipIsSmart = resp['computer_group']['is_smart']
+#					
+#					
+#					appendDataToCVS_JAMF_Computers_Info_Computer_Group_Membership = "{'Type':'Computer Group Membership Info',\
+#					\
+#					'Computer ID':mycomputerRecordGeneralID,\
+#					\
+#					'Computer Name':mycomputerRecordGeneral['name'],\
+#					\
+#					'Computer Group Membership Group ID':mygroupMembershipId,\
+#					\
+#					'Computer Group Membership Group Name':groupMembershipName,\
+#					\
+#					'Computer Group Membership Group Is Smart':groupMembershipIsSmart}"
+#					
+#					
+#					appendJAMF_Computers_Info_Computer_Group_Membership = eval(appendDataToCVS_JAMF_Computers_Info_Computer_Group_Membership)
+#					appendComputerGroupMembershipColumns = appendJAMF_Computers_Info_Computer_Group_Membership
+#					
+#					#Set Columns	
+#					Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, appendComputerGroupMembershipColumns, computerConfigurationProfileMembershipColumns)
+#					
+#					#Set CSV File
+#					dataToCsvComputers.append(Combined)	
+				
+				# Start New MultiProcess Code here
+				
+				list_of_groups = []
+				
+				for groupName in computerGroupMembershipRecords :
+					list_of_groups.append(f'{groupName}')
 					
-					#Renew token because the report is a long process
-					#renew token
-					url = JAMF_url+"/api/v1/auth/keep-alive"
 					
-					token = http.post(url, headers=btHeaders)
+				# Renew token because the report is a long process
+				# renew token
+				tokenURL = JAMF_url + "/api/v1/auth/keep-alive"
+				
+				token = http.post(tokenURL, headers=btHeaders)
+				
+				bearer = token.json()['token']
+				
+				btHeaders = {
+					'Accept': 'application/json',
+					'Authorization': 'Bearer '+bearer
+				}
+				
+				
+				def get_clean_List(url, groups):
 					
-					bearer = token.json()['token']
+					myURL = (f"{url}/JSSResource/computergroups/name/{groups}")
 					
-					btHeaders = {
-						'Accept': 'application/json',
-						'Authorization': 'Bearer '+bearer
-					}
+					test = http.get(myURL, headers=btHeaders)
 					
+					if test.status_code != 200:
+						list_of_groups.remove(groups)
+						
+						
+				def get_url(url, groups):
 					
-					#only need group name for list
-					computerGroupMembershipName = group
+					print(f"..............Working on Computer Group: {groups}, for Computer ID: " + getMycomputerRecordGeneralID)
 					
-					#do look up for each name interation
-					# Lookup group info by computer id
-					url = JAMF_url + "/JSSResource/computergroups/name/" + computerGroupMembershipName
-					
+					myURL = (f"{url}/JSSResource/computergroups/name/{groups}")
 					
 					try:
-						computerGroupMembershipNameResponse = http.get(url, headers=btHeaders)
+						
+						computerGroupMembershipNameResponse = http.get(myURL, headers=btHeaders)
 						
 						computerGroupMembershipNameResponse.raise_for_status()
 						
 						resp = computerGroupMembershipNameResponse.json()
 						
 					except HTTPError as http_err:
+						
 						# Process HTTP Error
 						check_http_err = str(http_err)
 						split_My_http_err = check_http_err.split()
 						
 						myHttpError = split_My_http_err[0]
-						myMissingRecordID = computerGroupMembershipName
+						myMissingRecordID = groups
 						myMissingRecordURL = split_My_http_err[5]
 						
 						if myHttpError == '404':
@@ -2941,36 +3071,76 @@ if get_JAMF_Computers_Info == ("yes"):
 						else:
 							print(f'HTTP error occurred: {http_err}')
 							
-						continue
 					except Exception as err:
 						print(f'Other error occurred: {err}')
-						continue
 						
-					#For Testing
-					#print(resp)
-					
+						
 					#Set Variables if Data Available
 					if len(str(resp['computer_group']['id'])) == 0:
 						mygroupMembershipId = ''
 					else:
 						mygroupMembershipId = int(resp['computer_group']['id'])	
 						
-					
+						
 					groupMembershipName = resp['computer_group']['name']
 					groupMembershipIsSmart = resp['computer_group']['is_smart']
 					
 					
+					return mygroupMembershipId, groupMembershipName, groupMembershipIsSmart
+				
+				
+				# Clean List
+				with ThreadPoolExecutor(max_workers=100) as pool:
+					get_data = partial(get_clean_List, JAMF_url)
+					list(pool.map(get_data,list_of_groups))
+					
+					
+				#print(list_of_groups)	
+					
+					
+				# Process List	
+				with ThreadPoolExecutor(max_workers=100) as pool:
+					get_data = partial(get_url, JAMF_url)
+					response_list = list(pool.map(get_data,list_of_groups))
+					
+					#print(response_list)
+					
+					
+				# Renew token because the report is a long process
+				# renew token
+				tokenURL = JAMF_url + "/api/v1/auth/keep-alive"
+				
+				token = http.post(tokenURL, headers=btHeaders)
+				
+				bearer = token.json()['token']
+				
+				btHeaders = {
+					'Accept': 'application/json',
+					'Authorization': 'Bearer '+bearer
+				}
+				
+				
+				for response in response_list:
+					# Make sure to refresh variables for each loop
+					myComputerID = mycomputerRecordGeneralID
+					myComputerName = mycomputerRecordGeneral['name']
+					myGroupMemberID = response[0] 
+					myGroupMemberName = response[1] 
+					myGroupIsSmart = response[2]
+					
+					#print(f"My Group info: {response}")	
+					
 					appendDataToCVS_JAMF_Computers_Info_Computer_Group_Membership = "{'Type':'Computer Group Membership Info',\
 					\
-					'Computer ID':mycomputerRecordGeneralID,\
+					'Computer ID':myComputerID,\
 					\
-					'Computer Name':mycomputerRecordGeneral['name'],\
+					'Computer Name':myComputerName,\
 					\
-					'Computer Group Membership Group ID':mygroupMembershipId,\
+					'Computer Group Membership Group ID':myGroupMemberID,\
 					\
-					'Computer Group Membership Group Name':groupMembershipName,\
+					'Computer Group Membership Group Name':myGroupMemberName,\
 					\
-					'Computer Group Membership Group Is Smart':groupMembershipIsSmart}"
+					'Computer Group Membership Group Is Smart':myGroupIsSmart}"
 					
 					
 					appendJAMF_Computers_Info_Computer_Group_Membership = eval(appendDataToCVS_JAMF_Computers_Info_Computer_Group_Membership)
@@ -2980,101 +3150,215 @@ if get_JAMF_Computers_Info == ("yes"):
 					Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, appendComputerGroupMembershipColumns, computerConfigurationProfileMembershipColumns)
 					
 					#Set CSV File
-					dataToCsvComputers.append(Combined)	
+					dataToCsvComputers.append(Combined)
+					
 					
 					
 			if get_JAMF_Computers_Info_Computer_Configuration_Profile_Membership == 'yes':
 				##########################################################################################		
 				# Get info for Computer Configuration Profile Membership	
 				##########################################################################################
+				print(".......Working on Configuration Profile Membership for Computer ID: " + getMycomputerRecordGeneralID)
+				
 				#Get Info from record
 				computerConfigurationProfileMembership = mycomputerConfigurationProfileMembership
 				
-				#Get Computer Group Info
-				for ConfigProfile in computerConfigurationProfileMembership:
-					
-					#Renew token because the report is a long process
-					#renew token
-					url = JAMF_url+"/api/v1/auth/keep-alive"
-					
-					token = http.post(url, headers=btHeaders)
-					
-					bearer = token.json()['token']
-					
-					btHeaders = {
-						'Accept': 'application/json',
-						'Authorization': 'Bearer '+bearer
-					}
-					
-					
+#				#Get Computer Group Info
+#				for ConfigProfile in computerConfigurationProfileMembership:
+#					
+#					#Renew token because the report is a long process
+#					#renew token
+#					url = JAMF_url+"/api/v1/auth/keep-alive"
+#					
+#					token = http.post(url, headers=btHeaders)
+#					
+#					bearer = token.json()['token']
+#					
+#					btHeaders = {
+#						'Accept': 'application/json',
+#						'Authorization': 'Bearer '+bearer
+#					}
+#					
+#					
+#					if ConfigProfile['id'] > 0:
+#						configurationProfileID = str(ConfigProfile['id'])
+#					
+#						#For testing
+#						#print(configurationProfileID)
+#
+#						# Set up url for getting information from each configurationProfile ID from JAMF API
+#						url = JAMF_url + "/JSSResource/osxconfigurationprofiles/id/" + configurationProfileID
+#						
+#						try:
+#							computerConfigurationProfileMembershipResponse = http.get(url, headers=btHeaders)
+#							
+#							computerConfigurationProfileMembershipResponse.raise_for_status()
+#							
+#							resp = computerConfigurationProfileMembershipResponse.json()
+#							
+#						except HTTPError as http_err:
+#							# Process HTTP Error
+#							check_http_err = str(http_err)
+#							split_My_http_err = check_http_err.split()
+#							
+#							myHttpError = split_My_http_err[0]
+#							myMissingRecordID = configurationProfileID
+#							myMissingRecordURL = split_My_http_err[5]
+#							
+#							if myHttpError == '404':
+#								print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+#								
+#							else:
+#								print(f'HTTP error occurred: {http_err}')
+#								
+#							continue
+#						except Exception as err:
+#							print(f'Other error occurred: {err}')
+#							continue
+#									
+#						#For Testing
+#						#print(resp) 
+#						
+#						#General Element for ID and Catagory
+#						myConfigurationProfileGeneral = resp['os_x_configuration_profile']['general']
+#						myConfigurationProfileGeneralID = myConfigurationProfileGeneral['id']
+#						myConfigurationProfileGeneralName = myConfigurationProfileGeneral['name']
+#						
+#						#For testing
+##						print(myConfigurationProfileGeneral)
+##						print(myConfigurationProfileGeneralID)
+##						print(myConfigurationProfileGeneralName)
+#
+#						appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership = "{'Type':'Computer Configuration Profile Membership Info',\
+#						\
+#						'Computer ID':mycomputerRecordGeneralID,\
+#						\
+#						'Computer Name':mycomputerRecordGeneral['name'],\
+#						\
+#						'Computer Configuration Profile Membership ID':myConfigurationProfileGeneralID,\
+#						\
+#						'Computer Configuration Profile Membership Name':myConfigurationProfileGeneralName}"
+#						
+#						
+#						appendJAMF_Computers_Info_Computer_Configuration_Profile_Membership = eval(appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership)
+#						appendComputerConfigurationProfileMembershipColumns = appendJAMF_Computers_Info_Computer_Configuration_Profile_Membership
+#						
+#						#Set Columns	
+#						Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns, appendComputerConfigurationProfileMembershipColumns)
+#						
+#						#Set CSV File
+#						dataToCsvComputers.append(Combined)
+				
+				#!/usr/bin/env python3
+				
+				# Start New MultiProcess Code here
+				
+				list_of_config_profiles_ID = []
+				
+				for ConfigProfile in computerConfigurationProfileMembership :
 					if ConfigProfile['id'] > 0:
 						configurationProfileID = str(ConfigProfile['id'])
+						list_of_config_profiles_ID.append(f'{configurationProfileID}')
+						
+						
+				def get_clean_List(url, configProfiles):
 					
-						#For testing
-						#print(configurationProfileID)
-
-						# Set up url for getting information from each configurationProfile ID from JAMF API
-						url = JAMF_url + "/JSSResource/osxconfigurationprofiles/id/" + configurationProfileID
+					myURL = (f"{url}/JSSResource/osxconfigurationprofiles/id/{configProfiles}")
+					
+					test = http.get(myURL, headers=headers, auth = HTTPBasicAuth(username, password))
+					
+					if test.status_code != 200:
+						list_of_config_profiles_ID.remove(configProfiles)
 						
-						try:
-							computerConfigurationProfileMembershipResponse = http.get(url, headers=btHeaders)
+						
+				def get_url(url, configProfiles):
+					
+					print(f"..............Working on Configuration Profile ID: {configProfiles}, for Computer ID: " + getMycomputerRecordGeneralID)
+					
+					myURL = (f"{url}/JSSResource/osxconfigurationprofiles/id/{configProfiles}")
+					
+					try:
+						
+						computerConfigurationProfileMembershipResponse = http.get(myURL, headers=headers, auth = HTTPBasicAuth(username, password))
+						
+						computerConfigurationProfileMembershipResponse.raise_for_status()
+						
+						resp = computerConfigurationProfileMembershipResponse.json()
+						
+					except HTTPError as http_err:
+						
+						# Process HTTP Error
+						check_http_err = str(http_err)
+						split_My_http_err = check_http_err.split()
+						
+						myHttpError = split_My_http_err[0]
+						myMissingRecordID = configProfiles
+						myMissingRecordURL = split_My_http_err[5]
+						
+						if myHttpError == '404':
+							print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
 							
-							computerConfigurationProfileMembershipResponse.raise_for_status()
+						else:
+							print(f'HTTP error occurred: {http_err}')
 							
-							resp = computerConfigurationProfileMembershipResponse.json()
-							
-						except HTTPError as http_err:
-							# Process HTTP Error
-							check_http_err = str(http_err)
-							split_My_http_err = check_http_err.split()
-							
-							myHttpError = split_My_http_err[0]
-							myMissingRecordID = configurationProfileID
-							myMissingRecordURL = split_My_http_err[5]
-							
-							if myHttpError == '404':
-								print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
-								
-							else:
-								print(f'HTTP error occurred: {http_err}')
-								
-							continue
-						except Exception as err:
-							print(f'Other error occurred: {err}')
-							continue
-									
-						#For Testing
-						#print(resp) 
-						
-						#General Element for ID and Catagory
-						myConfigurationProfileGeneral = resp['os_x_configuration_profile']['general']
-						myConfigurationProfileGeneralID = myConfigurationProfileGeneral['id']
-						myConfigurationProfileGeneralName = myConfigurationProfileGeneral['name']
-						
-						#For testing
-#						print(myConfigurationProfileGeneral)
-#						print(myConfigurationProfileGeneralID)
-#						print(myConfigurationProfileGeneralName)
-
-						appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership = "{'Type':'Computer Configuration Profile Membership Info',\
-						\
-						'Computer ID':mycomputerRecordGeneralID,\
-						\
-						'Computer Name':mycomputerRecordGeneral['name'],\
-						\
-						'Computer Configuration Profile Membership ID':myConfigurationProfileGeneralID,\
-						\
-						'Computer Configuration Profile Membership Name':myConfigurationProfileGeneralName}"
+					except Exception as err:
+						print(f'Other error occurred: {err}')
 						
 						
-						appendJAMF_Computers_Info_Computer_Configuration_Profile_Membership = eval(appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership)
-						appendComputerConfigurationProfileMembershipColumns = appendJAMF_Computers_Info_Computer_Configuration_Profile_Membership
-						
-						#Set Columns	
-						Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns, appendComputerConfigurationProfileMembershipColumns)
-						
-						#Set CSV File
-						dataToCsvComputers.append(Combined)
+					#General Element for ID and Catagory
+					myConfigurationProfileGeneral = resp['os_x_configuration_profile']['general']
+					myConfigurationProfileGeneralID = myConfigurationProfileGeneral['id']
+					myConfigurationProfileGeneralName = myConfigurationProfileGeneral['name']
+					
+					
+					return myConfigurationProfileGeneralID, myConfigurationProfileGeneralName
+				
+				
+				
+				# Clean List
+				with ThreadPoolExecutor(max_workers=100) as pool:
+					get_data = partial(get_clean_List, JAMF_url)
+					list(pool.map(get_data,list_of_config_profiles_ID))
+					
+					
+				#print(list_of_config_profiles_ID)	
+					
+				# Process List	
+				with ThreadPoolExecutor(max_workers=100) as pool:
+					get_data = partial(get_url, JAMF_url)
+					response_list = list(pool.map(get_data,list_of_config_profiles_ID))
+					
+				#print(response_list)
+					
+					
+				for response in response_list:
+					# Make sure to refresh variables for each loop
+					myComputerID = mycomputerRecordGeneralID
+					myComputerName = mycomputerRecordGeneral['name']
+					myConfigProfileID = response[0] 
+					myConfigProfileName = response[1] 
+					
+					#print(f"My Group info: {response}")
+					
+					appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership = "{'Type':'Computer Configuration Profile Membership Info',\
+					\
+					'Computer ID':myComputerID,\
+					\
+					'Computer Name':myComputerName,\
+					\
+					'Computer Configuration Profile Membership ID':myConfigProfileID,\
+					\
+					'Computer Configuration Profile Membership Name':myConfigProfileName}"
+					
+					
+					appendJAMF_Computers_Info_Computer_Configuration_Profile_Membership = eval(appendDataToCVS_JAMF_Computers_Info_Computer_Configuration_Profile_Membership)
+					appendComputerConfigurationProfileMembershipColumns = appendJAMF_Computers_Info_Computer_Configuration_Profile_Membership
+					
+					#Set Columns	
+					Combined = MergeComputersInfo(computerColumns, hardwareColumns, FileVault2Columns, LocalAccountColumns, computerGroupMembershipColumns, appendComputerConfigurationProfileMembershipColumns)
+					
+					#Set CSV File
+					dataToCsvComputers.append(Combined)
 						
 				
 				
@@ -3105,45 +3389,599 @@ if get_JAMF_Policy_Info == ("yes"):
 	
 	policies.sort(key=lambda item: item.get('id'), reverse=False)
 	
-	# Process Policy List and get information linked to policies
-	for policy in policies:
-		
-		#Renew token because the report is a long process
-		#renew token
-		url = JAMF_url+"/api/v1/auth/keep-alive"
-		
-		token = http.post(url, headers=btHeaders)
-		
-		bearer = token.json()['token']
-		
-		btHeaders = {
-			'Accept': 'application/json',
-			'Authorization': 'Bearer '+bearer
-		}
-		
-		# Get Policy ID to do JAMF API lookup
+#	# Process Policy List and get information linked to policies
+#	for policy in policies:
+#		
+#		#Renew token because the report is a long process
+#		#renew token
+#		url = JAMF_url+"/api/v1/auth/keep-alive"
+#		
+#		token = http.post(url, headers=btHeaders)
+#		
+#		bearer = token.json()['token']
+#		
+#		btHeaders = {
+#			'Accept': 'application/json',
+#			'Authorization': 'Bearer '+bearer
+#		}
+#		
+#		# Get Policy ID to do JAMF API lookup
+#		PolicyID = str(policy['id']) 
+#		
+#		#	For Testing
+#		#print(PolicyID)
+#		
+#		# Set up url for getting information from each policy ID from JAMF API
+#		url = JAMF_url + "/JSSResource/policies/id/" + PolicyID
+#		
+#		try:
+#			response = http.get(url, headers=btHeaders)
+#			
+#			response.raise_for_status()
+#			
+#			getPolicy = response.json()
+#			
+#		except HTTPError as http_err:
+#			# Process HTTP Error
+#			check_http_err = str(http_err)
+#			split_My_http_err = check_http_err.split()
+#			
+#			myHttpError = split_My_http_err[0]
+#			myMissingRecordID = PolicyID
+#			myMissingRecordURL = split_My_http_err[5]
+#			
+#			if myHttpError == '404':
+#				print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+#				
+#			else:
+#				print(f'HTTP error occurred: {http_err}')
+#				
+#			continue
+#		except Exception as err:
+#			print(f'Other error occurred: {err}')
+#			continue
+#		
+#		# For Testing
+#		#print(getPolicy)
+#		
+#		#General Element for ID and Catagory
+#		myPolicyGeneral = getPolicy['policy']['general']
+#		myPolicyGeneralCatagory = getPolicy['policy']['general']['category']
+#		
+#		#Scope Element for Computer Targets
+#		myPolicyScopeTargetsAllComputers = getPolicy['policy']['scope']['all_computers']
+#		myPolicyScopeTargetsComputers = getPolicy['policy']['scope']['computers']
+#		myPolicyScopeTargetsComputerGroups = getPolicy['policy']['scope']['computer_groups']
+#	
+#		#Scope Element For Limitation
+#		#myPolicyScopeLimitationsUsers = getPolicy['policy']['scope']['limitations']['users']
+#		#myPolicyScopeLimitationsUserGroups = getPolicy['policy']['scope']['limitations']['user_groups']
+#		
+#		#Scope Element For Exclusions
+#		myPolicyScopeExclusionsComputers = getPolicy['policy']['scope']['exclusions']['computers']
+#		myPolicyScopeExclusionsComputerGroups = getPolicy['policy']['scope']['exclusions']['computer_groups']
+#		
+#		
+#		#Package Element
+#		myPackagesInfo = getPolicy['policy']['package_configuration']['packages']
+#		
+#	
+#		#Script Elements
+#		myScriptInfo = getPolicy['policy']['scripts']
+#		
+#		#SelfService Element
+#		mySelfServiceInfo = getPolicy['policy']['self_service']
+#		useForSelfService = str(mySelfServiceInfo['use_for_self_service'])
+#		
+#		
+#		##########################################################################################
+#		# Process Policy information for csv / Excel
+#		##########################################################################################
+#		
+#		# Individual Policy Info for each record
+#		getMyPolicyID = (str(myPolicyGeneral['id']) + " - " + myPolicyGeneral['name'])
+#		getMyPolicyGeneralCatagory = (str(myPolicyGeneralCatagory['id']) + " - " + myPolicyGeneralCatagory['name'])
+#		
+#		# Get info for Policies
+#		print("Working on Policy ID: " + getMyPolicyID)
+#		
+#		#Set Variables if Data Available
+#		if len(str(myPolicyGeneral['id'])) == 0:
+#			myPolicyGeneralID = ''
+#		else:
+#			myPolicyGeneralID = int(myPolicyGeneral['id'])
+#		
+#		if len(str(myPolicyGeneralCatagory['id'])) == 0:
+#			myPolicyGeneralCatagoryID = ''
+#		else:
+#			myPolicyGeneralCatagoryID = int(myPolicyGeneralCatagory['id'])
+#		
+#		#Get Catagory name and format for excel
+#		formatMyPolicyGeneralCatagory = f"\"{myPolicyGeneralCatagory['name']}\""
+#		
+#		# Set Variables for Dict for Policy Info
+#		appendDataToCVS_JAMF_Policy_Info = "{'Type':'Policy',\
+#			\
+#			'Policy ID':myPolicyGeneralID,\
+#			\
+#			'Policy Name':myPolicyGeneral['name'],\
+#			\
+#			'Policy Category ID':myPolicyGeneralCatagoryID,\
+#			\
+#			'Policy Category Name':formatMyPolicyGeneralCatagory}"
+#		
+#		appendJAMF_Policy_Info = eval(appendDataToCVS_JAMF_Policy_Info)
+#		appendPolicyColumns = appendJAMF_Policy_Info
+#		
+#		#Set Columns	
+#		Combined = MergePolicyInfo(appendPolicyColumns, selfServiceColumns, targetsColumns, exclusionColumns, packageColumns, scriptsColumns)
+#		
+#		#Set CSV File
+#		dataToCsvPolicy.append(Combined)	
+#	
+#		if get_JAMF_Policy_Info_SelfService == ("yes"):
+#			if useForSelfService == 'True':
+#				##########################################################################################
+#				# Get Info for Self Service
+#				##########################################################################################
+#				# Set Variables for Dict for Policy Info
+#				appendDataToCVS_JAMF_Policy_SelfService_Info = "{'Type':'Policy Self Service Info',\
+#				\
+#				'Policy ID':myPolicyGeneralID,\
+#				\
+#				'Policy Name':myPolicyGeneral['name'],\
+#				\
+#				'Policy Category ID':myPolicyGeneralCatagoryID,\
+#				\
+#				'Policy Category Name':formatMyPolicyGeneralCatagory,\
+#				\
+#				'Policy In SelfService':str(mySelfServiceInfo['use_for_self_service']),\
+#				\
+#				'Policy In SelfService Name':mySelfServiceInfo['self_service_display_name']}"
+#				
+#				appendJAMF_Policy_SelfService_Info = eval(appendDataToCVS_JAMF_Policy_SelfService_Info)
+#				appendSelfServiceColumns = appendJAMF_Policy_SelfService_Info
+#				
+#				#Set Columns	
+#				Combined = MergePolicyInfo(policyColumns, appendSelfServiceColumns, targetsColumns, exclusionColumns, packageColumns, scriptsColumns)
+#				
+#				#Set CSV File
+#				dataToCsvPolicy.append(Combined)	
+#	
+#		if get_JAMF_Policy_Info_Targets == ("yes"):
+#			##########################################################################################		
+#			# Get info for Target Computers	
+#			##########################################################################################
+#			for computer in myPolicyScopeTargetsComputers:
+#				
+#				#Set Variables if Data Available
+#				if len(str(computer['id'])) == 0:
+#					computerID = ''
+#				else:
+#					computerID = int(computer['id'])
+#					
+#					
+#				appendDataToCVS_JAMF_Policy_Target_Info = "{'Type':'Policy Computer Targets',\
+#				\
+#				'Policy ID':myPolicyGeneralID,\
+#				\
+#				'Policy Name':myPolicyGeneral['name'],\
+#				\
+#				'Policy Category ID':myPolicyGeneralCatagoryID,\
+#				\
+#				'Policy Category Name':formatMyPolicyGeneralCatagory,\
+#				\
+#				'Policy Target All Computers':str(myPolicyScopeTargetsAllComputers),\
+#				\
+#				'Policy Target Computer ID':computerID,\
+#				\
+#				'Policy Target Computer Name':computer['name']}"
+#				
+#				appendJAMF_Policy_Target_Info = eval(appendDataToCVS_JAMF_Policy_Target_Info)
+#				appendtargetsColumns = appendJAMF_Policy_Target_Info
+#				
+#				#Set Columns	
+#				Combined = MergePolicyInfo(policyColumns, selfServiceColumns, appendtargetsColumns, exclusionColumns, packageColumns, scriptsColumns)
+#				
+#				#Set CSV File
+#				dataToCsvPolicy.append(Combined)
+#			
+#			
+#			##########################################################################################
+#			# Get Info for Target Computer Groups
+#			##########################################################################################
+#			for target in myPolicyScopeTargetsComputerGroups:
+#				
+#				targetGroupID = str(target['id'])
+#				
+#				#Get Group Info from JAMF API
+#				url = JAMF_url + "/JSSResource/computergroups/id/" + targetGroupID
+#				
+#				try:
+#					response = http.get(url, headers=btHeaders)
+#					
+#					response.raise_for_status()
+#					
+#					getTargetGroupData = response.json()
+#					
+#				except HTTPError as http_err:
+#					# Process HTTP Error
+#					check_http_err = str(http_err)
+#					split_My_http_err = check_http_err.split()
+#					
+#					myHttpError = split_My_http_err[0]
+#					myMissingRecordID = targetGroupID
+#					myMissingRecordURL = split_My_http_err[5]
+#					
+#					if myHttpError == '404':
+#						print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+#						
+#					else:
+#						print(f'HTTP error occurred: {http_err}')
+#						
+#					continue
+#				except Exception as err:
+#					print(f'Other error occurred: {err}')
+#					continue
+#					
+#				
+#				#Computer Group Element for Target Groups
+#				myTargetsComputerGroupInfo = getTargetGroupData['computer_group']
+#				
+#				#Set Variables if Data Available
+#				if len(str(myTargetsComputerGroupInfo['id'])) == 0:
+#					myTargetsComputerGroupInfoID = ''
+#				else:
+#					myTargetsComputerGroupInfoID = int(myTargetsComputerGroupInfo['id'])
+#					
+#					
+#				appendDataToCVS_JAMF_Policy_Target_Group_Info = "{'Type':'Policy Computer Target Group',\
+#				\
+#				'Policy ID':myPolicyGeneralID,\
+#				\
+#				'Policy Name':myPolicyGeneral['name'],\
+#				\
+#				'Policy Category ID':myPolicyGeneralCatagoryID,\
+#				\
+#				'Policy Category Name':formatMyPolicyGeneralCatagory,\
+#				\
+#				'Policy Target Group ID':myTargetsComputerGroupInfoID,\
+#				\
+#				'Policy Target Group Name':myTargetsComputerGroupInfo['name'],\
+#				\
+#				'Policy Target Group is Smart':str(myTargetsComputerGroupInfo['is_smart'])}"
+#				
+#				appendJAMF_Policy_Target_Group_Info = eval(appendDataToCVS_JAMF_Policy_Target_Group_Info)
+#				appendtargetsGroupsColumns = appendJAMF_Policy_Target_Group_Info
+#				
+#				#Set Columns	
+#				Combined = MergePolicyInfo(policyColumns, selfServiceColumns, appendtargetsGroupsColumns, exclusionColumns, packageColumns, scriptsColumns)
+#				
+#				#Set CSV File
+#				dataToCsvPolicy.append(Combined)
+#			
+#			
+#		if get_JAMF_Policy_Info_Exclusions == ("yes"):
+#			##########################################################################################
+#			# Get info for exclusion Computers
+#			##########################################################################################
+#			for exclusion in myPolicyScopeExclusionsComputers:
+#				
+#				#Set Variables if Data Available
+#				if len(str(exclusion['id'])) == 0:
+#					exclusionID = ''
+#				else:
+#					exclusionID = int(exclusion['id'])
+#					
+#					
+#				appendDataToCVS_JAMF_Policy_Exclusion_Info = "{'Type':'Policy Computer Exclusions',\
+#				\
+#				'Policy ID':myPolicyGeneralID,\
+#				\
+#				'Policy Name':myPolicyGeneral['name'],\
+#				\
+#				'Policy Category ID':myPolicyGeneralCatagoryID,\
+#				\
+#				'Policy Category Name':formatMyPolicyGeneralCatagory,\
+#				\
+#				'Policy Exclusion Computer ID':exclusionID,\
+#				\
+#				'Policy Exclusion Computer Name':exclusion['name']}"
+#				
+#				appendJAMF_Policy_Exclusion_Info = eval(appendDataToCVS_JAMF_Policy_Exclusion_Info)
+#				appendExclusionColumns = appendJAMF_Policy_Exclusion_Info
+#				
+#				#Set Columns	
+#				Combined = MergePolicyInfo(policyColumns, selfServiceColumns, targetsColumns, appendExclusionColumns, packageColumns, scriptsColumns)
+#				
+#				#Set CSV File
+#				dataToCsvPolicy.append(Combined)
+#				
+#				
+#			##########################################################################################
+#			# Get Info for Computer Exclusions groups
+#			##########################################################################################
+#			for exclusion in myPolicyScopeExclusionsComputerGroups:
+#				
+#				exclusionGroupID = str(exclusion['id'])
+#				
+#				#Get Group Info from JAMF API
+#				url = JAMF_url + "/JSSResource/computergroups/id/" + exclusionGroupID
+#				
+#				try:
+#					response = http.get(url, headers=btHeaders)
+#					
+#					response.raise_for_status()
+#					
+#					getExclusionGroupData = response.json()
+#					
+#				except HTTPError as http_err:
+#					# Process HTTP Error
+#					check_http_err = str(http_err)
+#					split_My_http_err = check_http_err.split()
+#					
+#					myHttpError = split_My_http_err[0]
+#					myMissingRecordID = exclusionGroupID
+#					myMissingRecordURL = split_My_http_err[5]
+#					
+#					if myHttpError == '404':
+#						print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+#						
+#					else:
+#						print(f'HTTP error occurred: {http_err}')
+#						
+#					continue
+#				except Exception as err:
+#					print(f'Other error occurred: {err}')
+#					continue
+#					
+#				
+#				myExclusionsComputerGroupInfo = getExclusionGroupData['computer_group']
+#				
+#				#Set Variables if Data Available
+#				if len(str(myExclusionsComputerGroupInfo['id'])) == 0:
+#					myExclusionsComputerGroupInfoID = ''
+#				else:
+#					myExclusionsComputerGroupInfoID = int(myExclusionsComputerGroupInfo['id'])
+#					
+#					
+#				appendDataToCVS_JAMF_Policy_Exclusion_Group_Info = "{'Type':'Policy Computer Exclusions Group',\
+#				\
+#				'Policy ID':myPolicyGeneralID,\
+#				\
+#				'Policy Name':myPolicyGeneral['name'],\
+#				\
+#				'Policy Category ID':myPolicyGeneralCatagoryID,\
+#				\
+#				'Policy Category Name':formatMyPolicyGeneralCatagory,\
+#				\
+#				'Policy Exclusion Group id':myExclusionsComputerGroupInfoID,\
+#				\
+#				'Policy Exclusion Group Name':myExclusionsComputerGroupInfo['name'],\
+#				\
+#				'Policy Exclusion Group is Smart':str(myExclusionsComputerGroupInfo['is_smart'])}"
+#				
+#				appendJAMF_Policy_Exclusion_Info = eval(appendDataToCVS_JAMF_Policy_Exclusion_Group_Info)
+#				appendExclusionGroupsColumns = appendJAMF_Policy_Exclusion_Info
+#				
+#				#Set Columns	
+#				Combined = MergePolicyInfo(policyColumns, selfServiceColumns, targetsColumns, appendExclusionGroupsColumns, packageColumns, scriptsColumns)
+#				
+#				#Set CSV File
+#				dataToCsvPolicy.append(Combined)
+#				
+#				
+#		if get_JAMF_Policy_Info_Packages == ("yes"):		
+#			##########################################################################################
+#			#Get Info for Packages in Policy
+#			##########################################################################################
+#			for package in myPackagesInfo:
+#				
+#				packageID = str(package['id'])
+#				
+#				#Get Group Info from JAMF API
+#				url = JAMF_url + "/JSSResource/packages/id/" + packageID
+#				
+#				try:
+#					response = http.get(url, headers=btHeaders)
+#					
+#					response.raise_for_status()
+#					
+#					getPackageData = response.json()
+#					
+#				except HTTPError as http_err:
+#					# Process HTTP Error
+#					check_http_err = str(http_err)
+#					split_My_http_err = check_http_err.split()
+#					
+#					myHttpError = split_My_http_err[0]
+#					myMissingRecordID = packageID
+#					myMissingRecordURL = split_My_http_err[5]
+#					
+#					if myHttpError == '404':
+#						print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+#						
+#					else:
+#						print(f'HTTP error occurred: {http_err}')
+#						
+#					continue
+#				except Exception as err:
+#					print(f'Other error occurred: {err}')
+#					continue					
+#				
+#				myPackageInfo = getPackageData['package']
+#				
+#				formatMyPackageInfoCatagory = f"\"{myPackageInfo['category']}\""
+#				
+#				#Set Variables if Data Available
+#				if len(str(myPackageInfo['id'])) == 0:
+#					myPackageInfoID = ''
+#				else:
+#					myPackageInfoID = int(myPackageInfo['id'])
+#					
+#					
+#				appendDataToCVS_JAMF_Policy_Packages_Info = "{'Type':'Policy Package',\
+#				\
+#				'Policy ID':myPolicyGeneralID,\
+#				\
+#				'Policy Name':myPolicyGeneral['name'],\
+#				\
+#				'Policy Category ID':myPolicyGeneralCatagoryID,\
+#				\
+#				'Policy Category Name':formatMyPolicyGeneralCatagory,\
+#				\
+#				'Policy Package ID':myPackageInfoID,\
+#				\
+#				'Policy Package Name':myPackageInfo['name'],\
+#				\
+#				'Policy Package Category Name':formatMyPackageInfoCatagory,\
+#				\
+#				'Policy Package Filename':myPackageInfo['filename']}"
+#				
+#				appendJAMF_Policy_Packages_Info = eval(appendDataToCVS_JAMF_Policy_Packages_Info)
+#				appendPackageColumns = appendJAMF_Policy_Packages_Info
+#				
+#				#Set Columns	
+#				Combined = MergePolicyInfo(policyColumns, selfServiceColumns, targetsColumns, exclusionColumns, appendPackageColumns, scriptsColumns)
+#				
+#				#Set CSV File
+#				dataToCsvPolicy.append(Combined)
+#				
+#				
+#		if get_JAMF_Policy_Info_Scripts == ("yes"):		
+#			##########################################################################################
+#			#Get Info for scripts in Policy
+#			##########################################################################################
+#			for script in myScriptInfo:
+#				
+#				scriptID = str(script['id'])
+#				
+#				#Get Group Info from JAMF API
+#				url = JAMF_url + "/JSSResource/scripts/id/" + scriptID
+#				
+#				try:
+#					response = http.get(url, headers=btHeaders)
+#					
+#					response.raise_for_status()
+#					
+#					getScriptData = response.json()
+#					
+#				except HTTPError as http_err:
+#					# Process HTTP Error
+#					check_http_err = str(http_err)
+#					split_My_http_err = check_http_err.split()
+#					
+#					myHttpError = split_My_http_err[0]
+#					myMissingRecordID = scriptID
+#					myMissingRecordURL = split_My_http_err[5]
+#					
+#					if myHttpError == '404':
+#						print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+#						
+#					else:
+#						print(f'HTTP error occurred: {http_err}')
+#						
+#					continue
+#				except Exception as err:
+#					print(f'Other error occurred: {err}')
+#					continue
+#					
+#				
+#				myScriptInfo = getScriptData['script']
+#				
+#				formatMyScriptsinfoCatagory = f"\"{myScriptInfo['category']}\""
+#				
+#				#Set Variables if Data Available
+#				if len(str(myScriptInfo['id'])) == 0:
+#					myScriptInfoID = ''
+#				else:
+#					myScriptInfoID = int(myScriptInfo['id'])
+#					
+#				appendDataToCVS_JAMF_Policy_Scripts_Info = "{'Type':'Policy Scripts',\
+#				\
+#				'Policy ID':myPolicyGeneralID,\
+#				\
+#				'Policy Name':myPolicyGeneral['name'],\
+#				\
+#				'Policy Category ID':myPolicyGeneralCatagoryID,\
+#				\
+#				'Policy Category Name':formatMyPolicyGeneralCatagory,\
+#				\
+#				'Policy Script ID':myScriptInfoID,\
+#				\
+#				'Policy Script Name':myScriptInfo['name'],\
+#				\
+#				'Policy Script Category Name':formatMyScriptsinfoCatagory,\
+#				\
+#				'Policy Script Filename':myScriptInfo['filename']}"
+#
+#
+#				appendJAMF_Policy_Scripts_Info = eval(appendDataToCVS_JAMF_Policy_Scripts_Info)
+#				appendScriptsColumns = appendJAMF_Policy_Scripts_Info
+#				
+#				#Set Columns	
+#				Combined = MergePolicyInfo(policyColumns, selfServiceColumns, targetsColumns, exclusionColumns, packageColumns, appendScriptsColumns)
+#				
+#				#Set CSV File
+#				dataToCsvPolicy.append(Combined)
+	
+	
+	# Start New MultiProcess Code here
+	
+	list_of_policies = []
+	
+	for policy in policies :
 		PolicyID = str(policy['id']) 
+		list_of_policies.append(f'{PolicyID}')
 		
-		#	For Testing
-		#print(PolicyID)
 		
-		# Set up url for getting information from each policy ID from JAMF API
-		url = JAMF_url + "/JSSResource/policies/id/" + PolicyID
+	#Renew token because the report is a long process
+	#renew token
+	url = JAMF_url+"/api/v1/auth/keep-alive"
+	
+	token = http.post(url, headers=btHeaders)
+	
+	bearer = token.json()['token']
+	
+	btHeaders = {
+		'Accept': 'application/json',
+		'Authorization': 'Bearer '+bearer
+	}
+	
+	
+	def get_clean_List(url, policyIDList):
+		
+		myURL = (f"{url}/JSSResource/policies/id/{policyIDList}")
+		
+		test = http.get(myURL, headers=btHeaders)
+		
+		if test.status_code != 200:
+			list_of_policies.remove(policyIDList)
+			
+			
+			
+	def get_url(url, policyIDList):
+		
+		getPolicy = ''
+		
+		myURL = (f"{url}/JSSResource/policies/id/{policyIDList}")
 		
 		try:
-			response = http.get(url, headers=btHeaders)
+			
+			response = http.get(myURL, headers=btHeaders)
 			
 			response.raise_for_status()
 			
 			getPolicy = response.json()
 			
 		except HTTPError as http_err:
+			
 			# Process HTTP Error
 			check_http_err = str(http_err)
 			split_My_http_err = check_http_err.split()
 			
 			myHttpError = split_My_http_err[0]
-			myMissingRecordID = PolicyID
+			myMissingRecordID = policyIDList
 			myMissingRecordURL = split_My_http_err[5]
 			
 			if myHttpError == '404':
@@ -3152,41 +3990,88 @@ if get_JAMF_Policy_Info == ("yes"):
 			else:
 				print(f'HTTP error occurred: {http_err}')
 				
-			continue
 		except Exception as err:
 			print(f'Other error occurred: {err}')
-			continue
+			
+			
+		return getPolicy
+	
+	
+	# Clean List
+	with ThreadPoolExecutor(max_workers=100) as pool:
+		get_data = partial(get_clean_List, JAMF_url)
+		list(pool.map(get_data,list_of_policies))
 		
-		# For Testing
-		#print(getPolicy)
 		
+	#print(list_of_policies)
+		
+		
+	#Renew token because the report is a long process
+	#renew token
+	url = JAMF_url+"/api/v1/auth/keep-alive"
+	
+	token = http.post(url, headers=btHeaders)
+	
+	bearer = token.json()['token']
+	
+	btHeaders = {
+		'Accept': 'application/json',
+		'Authorization': 'Bearer '+bearer
+	}
+	
+	
+	# Process List	
+	with ThreadPoolExecutor(max_workers=100) as pool:
+		get_data = partial(get_url, JAMF_url)
+		response_list = list(pool.map(get_data,list_of_policies))
+		
+		#print(response_list)
+		
+		
+	#Renew token because the report is a long process
+	#renew token
+	url = JAMF_url+"/api/v1/auth/keep-alive"
+	
+	token = http.post(url, headers=btHeaders)
+	
+	bearer = token.json()['token']
+	
+	btHeaders = {
+		'Accept': 'application/json',
+		'Authorization': 'Bearer '+bearer
+	}
+	
+	
+	def processData(response):
+		global btHeaders
+	##	# Make sure to refresh variables for each loop
 		#General Element for ID and Catagory
-		myPolicyGeneral = getPolicy['policy']['general']
-		myPolicyGeneralCatagory = getPolicy['policy']['general']['category']
+		myPolicyGeneral = response['policy']['general']
+		myPolicyGeneralCatagory = response['policy']['general']['category']
 		
 		#Scope Element for Computer Targets
-		myPolicyScopeTargetsAllComputers = getPolicy['policy']['scope']['all_computers']
-		myPolicyScopeTargetsComputers = getPolicy['policy']['scope']['computers']
-		myPolicyScopeTargetsComputerGroups = getPolicy['policy']['scope']['computer_groups']
-	
+		myPolicyScopeTargetsAllComputers = response['policy']['scope']['all_computers']
+		myPolicyScopeTargetsComputers = response['policy']['scope']['computers']
+		myPolicyScopeTargetsComputerGroups = response['policy']['scope']['computer_groups']
+		
 		#Scope Element For Limitation
 		#myPolicyScopeLimitationsUsers = getPolicy['policy']['scope']['limitations']['users']
 		#myPolicyScopeLimitationsUserGroups = getPolicy['policy']['scope']['limitations']['user_groups']
 		
 		#Scope Element For Exclusions
-		myPolicyScopeExclusionsComputers = getPolicy['policy']['scope']['exclusions']['computers']
-		myPolicyScopeExclusionsComputerGroups = getPolicy['policy']['scope']['exclusions']['computer_groups']
+		myPolicyScopeExclusionsComputers = response['policy']['scope']['exclusions']['computers']
+		myPolicyScopeExclusionsComputerGroups = response['policy']['scope']['exclusions']['computer_groups']
 		
 		
 		#Package Element
-		myPackagesInfo = getPolicy['policy']['package_configuration']['packages']
+		myPackagesInfo = response['policy']['package_configuration']['packages']
 		
-	
+		
 		#Script Elements
-		myScriptInfo = getPolicy['policy']['scripts']
+		myScriptInfo = response['policy']['scripts']
 		
 		#SelfService Element
-		mySelfServiceInfo = getPolicy['policy']['self_service']
+		mySelfServiceInfo = response['policy']['self_service']
 		useForSelfService = str(mySelfServiceInfo['use_for_self_service'])
 		
 		
@@ -3206,12 +4091,12 @@ if get_JAMF_Policy_Info == ("yes"):
 			myPolicyGeneralID = ''
 		else:
 			myPolicyGeneralID = int(myPolicyGeneral['id'])
-		
+			
 		if len(str(myPolicyGeneralCatagory['id'])) == 0:
 			myPolicyGeneralCatagoryID = ''
 		else:
 			myPolicyGeneralCatagoryID = int(myPolicyGeneralCatagory['id'])
-		
+			
 		#Get Catagory name and format for excel
 		formatMyPolicyGeneralCatagory = f"\"{myPolicyGeneralCatagory['name']}\""
 		
@@ -3234,8 +4119,22 @@ if get_JAMF_Policy_Info == ("yes"):
 		
 		#Set CSV File
 		dataToCsvPolicy.append(Combined)	
-	
+		
 		if get_JAMF_Policy_Info_SelfService == ("yes"):
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
 			if useForSelfService == 'True':
 				##########################################################################################
 				# Get Info for Self Service
@@ -3263,11 +4162,25 @@ if get_JAMF_Policy_Info == ("yes"):
 				
 				#Set CSV File
 				dataToCsvPolicy.append(Combined)	
-	
+				
 		if get_JAMF_Policy_Info_Targets == ("yes"):
 			##########################################################################################		
 			# Get info for Target Computers	
 			##########################################################################################
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
 			for computer in myPolicyScopeTargetsComputers:
 				
 				#Set Variables if Data Available
@@ -3276,7 +4189,10 @@ if get_JAMF_Policy_Info == ("yes"):
 				else:
 					computerID = int(computer['id'])
 					
-					
+				# Get info for Policies
+				print(f"Working on Computer ID: {computerID}")
+				
+				
 				appendDataToCVS_JAMF_Policy_Target_Info = "{'Type':'Policy Computer Targets',\
 				\
 				'Policy ID':myPolicyGeneralID,\
@@ -3301,32 +4217,67 @@ if get_JAMF_Policy_Info == ("yes"):
 				
 				#Set CSV File
 				dataToCsvPolicy.append(Combined)
-			
-			
+				
+				
 			##########################################################################################
 			# Get Info for Target Computer Groups
 			##########################################################################################
+			# Start New MultiProcess Code here
+				
+			list_of_Targets = []
+			
 			for target in myPolicyScopeTargetsComputerGroups:
+				targetID = str(target['id']) 
+				list_of_Targets.append(f'{targetID}')
 				
-				targetGroupID = str(target['id'])
 				
-				#Get Group Info from JAMF API
-				url = JAMF_url + "/JSSResource/computergroups/id/" + targetGroupID
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
+			def get_clean_List(url, targetIDList):
+				
+				myURL = (f"{url}/JSSResource/computergroups/id/{targetIDList}")
+				
+				test = http.get(myURL, headers=btHeaders)
+				
+				if test.status_code != 200:
+					list_of_Targets.remove(targetIDList)
+					
+					
+					
+			def get_url(url, targetIDList):
+				
+				getTargetGroupData = ''
+				
+				myURL = (f"{url}/JSSResource/computergroups/id/{targetIDList}")
 				
 				try:
-					response = http.get(url, headers=btHeaders)
+					
+					response = http.get(myURL, headers=btHeaders)
 					
 					response.raise_for_status()
 					
 					getTargetGroupData = response.json()
 					
 				except HTTPError as http_err:
+					
 					# Process HTTP Error
 					check_http_err = str(http_err)
 					split_My_http_err = check_http_err.split()
 					
 					myHttpError = split_My_http_err[0]
-					myMissingRecordID = targetGroupID
+					myMissingRecordID = targetIDList
 					myMissingRecordURL = split_My_http_err[5]
 					
 					if myHttpError == '404':
@@ -3335,14 +4286,49 @@ if get_JAMF_Policy_Info == ("yes"):
 					else:
 						print(f'HTTP error occurred: {http_err}')
 						
-					continue
 				except Exception as err:
 					print(f'Other error occurred: {err}')
-					continue
 					
+					
+				return getTargetGroupData
+			
+			
+			# Clean List
+			with ThreadPoolExecutor(max_workers=100) as pool:
+				get_data = partial(get_clean_List, JAMF_url)
+				list(pool.map(get_data,list_of_Targets))
 				
-				#Computer Group Element for Target Groups
-				myTargetsComputerGroupInfo = getTargetGroupData['computer_group']
+				
+			#print(list_of_policies)	
+				
+				
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
+			# Process List	
+			with ThreadPoolExecutor(max_workers=100) as pool:
+				get_data = partial(get_url, JAMF_url)
+				response_list = list(pool.map(get_data,list_of_Targets))
+				
+				
+			#print(response_list)
+			
+			
+			for response in response_list:
+			##	# Make sure to refresh variables for each loop
+				myTargetsComputerGroupInfo = response['computer_group']
+				
 				
 				#Set Variables if Data Available
 				if len(str(myTargetsComputerGroupInfo['id'])) == 0:
@@ -3350,7 +4336,10 @@ if get_JAMF_Policy_Info == ("yes"):
 				else:
 					myTargetsComputerGroupInfoID = int(myTargetsComputerGroupInfo['id'])
 					
-					
+				# Get info for Policies
+				print(f"Working on Target Group ID: {myTargetsComputerGroupInfoID}")
+				
+				
 				appendDataToCVS_JAMF_Policy_Target_Group_Info = "{'Type':'Policy Computer Target Group',\
 				\
 				'Policy ID':myPolicyGeneralID,\
@@ -3375,12 +4364,26 @@ if get_JAMF_Policy_Info == ("yes"):
 				
 				#Set CSV File
 				dataToCsvPolicy.append(Combined)
-			
-			
+				
+				
 		if get_JAMF_Policy_Info_Exclusions == ("yes"):
 			##########################################################################################
 			# Get info for exclusion Computers
 			##########################################################################################
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
 			for exclusion in myPolicyScopeExclusionsComputers:
 				
 				#Set Variables if Data Available
@@ -3389,7 +4392,10 @@ if get_JAMF_Policy_Info == ("yes"):
 				else:
 					exclusionID = int(exclusion['id'])
 					
-					
+				# Get info for Policies
+				print(f"Working on Target Group ID: {exclusionID}")
+				
+				
 				appendDataToCVS_JAMF_Policy_Exclusion_Info = "{'Type':'Policy Computer Exclusions',\
 				\
 				'Policy ID':myPolicyGeneralID,\
@@ -3417,27 +4423,62 @@ if get_JAMF_Policy_Info == ("yes"):
 			##########################################################################################
 			# Get Info for Computer Exclusions groups
 			##########################################################################################
+			# Start New MultiProcess Code here
+				
+			list_of_Exclusions = []
+			
 			for exclusion in myPolicyScopeExclusionsComputerGroups:
+				exclusionID = str(exclusion['id']) 
+				list_of_Exclusions.append(f'{exclusionID}')
 				
-				exclusionGroupID = str(exclusion['id'])
 				
-				#Get Group Info from JAMF API
-				url = JAMF_url + "/JSSResource/computergroups/id/" + exclusionGroupID
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
+			def get_clean_List(url, exclusionIDList):
+				
+				myURL = (f"{url}/JSSResource/computergroups/id/{exclusionIDList}")
+				
+				test = http.get(myURL, headers=btHeaders)
+				
+				if test.status_code != 200:
+					list_of_Exclusions.remove(exclusionIDList)
+					
+					
+					
+			def get_url(url, exclusionIDList):
+				
+				getExclusionGroupData = ''
+				
+				myURL = (f"{url}/JSSResource/computergroups/id/{exclusionIDList}")
 				
 				try:
-					response = http.get(url, headers=btHeaders)
+					
+					response = http.get(myURL, headers=btHeaders)
 					
 					response.raise_for_status()
 					
 					getExclusionGroupData = response.json()
 					
 				except HTTPError as http_err:
+					
 					# Process HTTP Error
 					check_http_err = str(http_err)
 					split_My_http_err = check_http_err.split()
 					
 					myHttpError = split_My_http_err[0]
-					myMissingRecordID = exclusionGroupID
+					myMissingRecordID = exclusionIDList
 					myMissingRecordURL = split_My_http_err[5]
 					
 					if myHttpError == '404':
@@ -3446,13 +4487,48 @@ if get_JAMF_Policy_Info == ("yes"):
 					else:
 						print(f'HTTP error occurred: {http_err}')
 						
-					continue
 				except Exception as err:
 					print(f'Other error occurred: {err}')
-					continue
 					
+					
+				return getExclusionGroupData
+			
+			
+			# Clean List
+			with ThreadPoolExecutor(max_workers=100) as pool:
+				get_data = partial(get_clean_List, JAMF_url)
+				list(pool.map(get_data,list_of_Exclusions))
 				
-				myExclusionsComputerGroupInfo = getExclusionGroupData['computer_group']
+				
+			#print(list_of_policies)	
+				
+				
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
+			# Process List	
+			with ThreadPoolExecutor(max_workers=100) as pool:
+				get_data = partial(get_url, JAMF_url)
+				response_list = list(pool.map(get_data,list_of_Exclusions))
+				
+				
+			#print(response_list)
+			
+			
+			for response in response_list:
+			##	# Make sure to refresh variables for each loop
+				myExclusionsComputerGroupInfo = response['computer_group']
 				
 				#Set Variables if Data Available
 				if len(str(myExclusionsComputerGroupInfo['id'])) == 0:
@@ -3460,7 +4536,10 @@ if get_JAMF_Policy_Info == ("yes"):
 				else:
 					myExclusionsComputerGroupInfoID = int(myExclusionsComputerGroupInfo['id'])
 					
-					
+				# Get info for Policies
+				print(f"Working on Exclusion Group ID: {myExclusionsComputerGroupInfoID}")
+				
+				
 				appendDataToCVS_JAMF_Policy_Exclusion_Group_Info = "{'Type':'Policy Computer Exclusions Group',\
 				\
 				'Policy ID':myPolicyGeneralID,\
@@ -3486,32 +4565,66 @@ if get_JAMF_Policy_Info == ("yes"):
 				#Set CSV File
 				dataToCsvPolicy.append(Combined)
 				
-				
 		if get_JAMF_Policy_Info_Packages == ("yes"):		
 			##########################################################################################
 			#Get Info for Packages in Policy
-			##########################################################################################
+			##########################################################################################	
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
+			# Start New MultiProcess Code here
+			
+			list_of_Packages = []
+			
 			for package in myPackagesInfo:
+				packageID = str(package['id']) 
+				list_of_Packages.append(f'{packageID}')
 				
-				packageID = str(package['id'])
 				
-				#Get Group Info from JAMF API
-				url = JAMF_url + "/JSSResource/packages/id/" + packageID
+			def get_clean_List(url, packageIDList):
+				
+				myURL = (f"{url}/JSSResource/packages/id/{packageIDList}")
+				
+				test = http.get(myURL, headers=btHeaders)
+				
+				if test.status_code != 200:
+					list_of_Packages.remove(packageIDList)
+					
+					
+					
+			def get_url(url, packageIDList):
+				
+				getPackageData = ''
+				
+				myURL = (f"{url}/JSSResource/packages/id/{packageIDList}")
 				
 				try:
-					response = http.get(url, headers=btHeaders)
+					
+					response = http.get(myURL, headers=btHeaders)
 					
 					response.raise_for_status()
 					
 					getPackageData = response.json()
 					
 				except HTTPError as http_err:
+					
 					# Process HTTP Error
 					check_http_err = str(http_err)
 					split_My_http_err = check_http_err.split()
 					
 					myHttpError = split_My_http_err[0]
-					myMissingRecordID = packageID
+					myMissingRecordID = packageIDList
 					myMissingRecordURL = split_My_http_err[5]
 					
 					if myHttpError == '404':
@@ -3520,12 +4633,47 @@ if get_JAMF_Policy_Info == ("yes"):
 					else:
 						print(f'HTTP error occurred: {http_err}')
 						
-					continue
 				except Exception as err:
 					print(f'Other error occurred: {err}')
-					continue					
+					
+					
+				return getPackageData
+			
+			
+			# Clean List
+			with ThreadPoolExecutor(max_workers=100) as pool:
+				get_data = partial(get_clean_List, JAMF_url)
+				list(pool.map(get_data,list_of_Packages))
 				
-				myPackageInfo = getPackageData['package']
+				
+			#print(list_of_policies)
+				
+				
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
+			# Process List	
+			with ThreadPoolExecutor(max_workers=100) as pool:
+				get_data = partial(get_url, JAMF_url)
+				response_list = list(pool.map(get_data,list_of_Packages))
+				
+				
+			#print(response_list)
+			
+			
+			for response in response_list:
+				myPackageInfo = response['package']
 				
 				formatMyPackageInfoCatagory = f"\"{myPackageInfo['category']}\""
 				
@@ -3536,6 +4684,10 @@ if get_JAMF_Policy_Info == ("yes"):
 					myPackageInfoID = int(myPackageInfo['id'])
 					
 					
+				# Get info for Policies
+				print(f"Working on Package ID: {myPackageInfoID}")
+				
+				
 				appendDataToCVS_JAMF_Policy_Packages_Info = "{'Type':'Policy Package',\
 				\
 				'Policy ID':myPolicyGeneralID,\
@@ -3568,27 +4720,76 @@ if get_JAMF_Policy_Info == ("yes"):
 			##########################################################################################
 			#Get Info for scripts in Policy
 			##########################################################################################
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
+			# Start New MultiProcess Code here
+			
+			list_of_Scripts = []
+			
 			for script in myScriptInfo:
-				
 				scriptID = str(script['id'])
+				list_of_Scripts.append(f'{scriptID}')
 				
-				#Get Group Info from JAMF API
-				url = JAMF_url + "/JSSResource/scripts/id/" + scriptID
+				
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
+			def get_clean_List(url, scriptIDList):
+				
+				myURL = (f"{url}/JSSResource/scripts/id/{scriptIDList}")
+				
+				test = http.get(myURL, headers=btHeaders)
+				
+				if test.status_code != 200:
+					list_of_Scripts.remove(scriptIDList)
+					
+					
+					
+			def get_url(url, scriptIDList):
+				
+				getScriptData = ''
+				
+				myURL = (f"{url}/JSSResource/scripts/id/{scriptIDList}")
 				
 				try:
-					response = http.get(url, headers=btHeaders)
+					
+					response = http.get(myURL, headers=btHeaders)
 					
 					response.raise_for_status()
 					
 					getScriptData = response.json()
 					
 				except HTTPError as http_err:
+					
 					# Process HTTP Error
 					check_http_err = str(http_err)
 					split_My_http_err = check_http_err.split()
 					
 					myHttpError = split_My_http_err[0]
-					myMissingRecordID = scriptID
+					myMissingRecordID = scriptIDList
 					myMissingRecordURL = split_My_http_err[5]
 					
 					if myHttpError == '404':
@@ -3597,13 +4798,47 @@ if get_JAMF_Policy_Info == ("yes"):
 					else:
 						print(f'HTTP error occurred: {http_err}')
 						
-					continue
 				except Exception as err:
 					print(f'Other error occurred: {err}')
-					continue
 					
+					
+				return getScriptData
+			
+			
+			# Clean List
+			with ThreadPoolExecutor(max_workers=100) as pool:
+				get_data = partial(get_clean_List, JAMF_url)
+				list(pool.map(get_data,list_of_Scripts))
 				
-				myScriptInfo = getScriptData['script']
+				
+			#print(list_of_policies)	
+				
+				
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
+			# Process List	
+			with ThreadPoolExecutor(max_workers=100) as pool:
+				get_data = partial(get_url, JAMF_url)
+				response_list = list(pool.map(get_data,list_of_Scripts))
+				
+				
+			#print(response_list)
+						
+			
+			for response in response_list:
+				myScriptInfo = response['script']
 				
 				formatMyScriptsinfoCatagory = f"\"{myScriptInfo['category']}\""
 				
@@ -3613,6 +4848,9 @@ if get_JAMF_Policy_Info == ("yes"):
 				else:
 					myScriptInfoID = int(myScriptInfo['id'])
 					
+				# Get info for Policies
+				print(f"Working on Script ID: {myScriptInfoID}")
+				
 				appendDataToCVS_JAMF_Policy_Scripts_Info = "{'Type':'Policy Scripts',\
 				\
 				'Policy ID':myPolicyGeneralID,\
@@ -3630,8 +4868,8 @@ if get_JAMF_Policy_Info == ("yes"):
 				'Policy Script Category Name':formatMyScriptsinfoCatagory,\
 				\
 				'Policy Script Filename':myScriptInfo['filename']}"
-
-
+				
+				
 				appendJAMF_Policy_Scripts_Info = eval(appendDataToCVS_JAMF_Policy_Scripts_Info)
 				appendScriptsColumns = appendJAMF_Policy_Scripts_Info
 				
@@ -3640,6 +4878,25 @@ if get_JAMF_Policy_Info == ("yes"):
 				
 				#Set CSV File
 				dataToCsvPolicy.append(Combined)
+				
+				
+	#Renew token because the report is a long process
+	#renew token
+	url = JAMF_url+"/api/v1/auth/keep-alive"
+	
+	token = http.post(url, headers=btHeaders)
+	
+	bearer = token.json()['token']
+	
+	btHeaders = {
+		'Accept': 'application/json',
+		'Authorization': 'Bearer '+bearer
+	}
+	
+	
+	# Process List
+	with ThreadPoolExecutor(max_workers=100) as pool:
+		list(pool.map(processData,response_list))
 
 
 ##########################################################################################
@@ -3672,45 +4929,398 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 	
 	configurationProfiles.sort(key=lambda item: item.get('id'), reverse=False)
 	
-	# Process Configuration Profile List and get information linked to Configuration Profiles
-	for configurationProfile in configurationProfiles:
+#	# Process Configuration Profile List and get information linked to Configuration Profiles
+#	for configurationProfile in configurationProfiles:
+#		
+#		#Renew token because the report is a long process
+#		#renew token
+#		url = JAMF_url+"/api/v1/auth/keep-alive"
+#		
+#		token = http.post(url, headers=btHeaders)
+#		
+#		bearer = token.json()['token']
+#		
+#		btHeaders = {
+#			'Accept': 'application/json',
+#			'Authorization': 'Bearer '+bearer
+#		}
+#		
+#		# Get configurationProfile ID to do JAMF API lookup
+#		configurationProfileID = str(configurationProfile['id']) 
+#	
+#		#For Testing
+#		#print(configurationProfileID)
+#		
+#		# Set up url for getting information from each configurationProfile ID from JAMF API
+#		url = JAMF_url + "/JSSResource/osxconfigurationprofiles/id/" + configurationProfileID
+#		
+#		try:
+#			response = http.get(url, headers=btHeaders)
+#			
+#			response.raise_for_status()
+#			
+#			getConfigurationProfile = response.json()
+#			
+#		except HTTPError as http_err:
+#			# Process HTTP Error
+#			check_http_err = str(http_err)
+#			split_My_http_err = check_http_err.split()
+#			
+#			myHttpError = split_My_http_err[0]
+#			myMissingRecordID = configurationProfileID
+#			myMissingRecordURL = split_My_http_err[5]
+#			
+#			if myHttpError == '404':
+#				print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+#				
+#			else:
+#				print(f'HTTP error occurred: {http_err}')
+#				
+#			continue
+#		except Exception as err:
+#			print(f'Other error occurred: {err}')
+#			continue
+#			
+#		
+#		# For Testing
+#		#print(getConfigurationProfile)
+#		
+#		#General Element for ID and Catagory
+#		myConfigurationProfileGeneral = getConfigurationProfile['os_x_configuration_profile']['general']
+#		myConfigurationProfileGeneralCatagory = getConfigurationProfile['os_x_configuration_profile']['general']['category']
+#		
+#		#Scope Element for Computer Targets
+#		myConfigurationProfileScopeTargetsAllComputers = getConfigurationProfile['os_x_configuration_profile']['scope']['all_computers']
+#		myConfigurationProfileScopeTargetsComputers = getConfigurationProfile['os_x_configuration_profile']['scope']['computers']
+#		myConfigurationProfileScopeTargetsComputerGroups = getConfigurationProfile['os_x_configuration_profile']['scope']['computer_groups']
+#		
+#		#Scope Element For Limitation
+#		myConfigurationProfileScopeLimitationsUsers = getConfigurationProfile['os_x_configuration_profile']['scope']['limitations']['users']
+#		myConfigurationProfileScopeLimitationsUserGroups = getConfigurationProfile['os_x_configuration_profile']['scope']['limitations']['user_groups']
+#		
+#		#Scope Element For Exclusions
+#		myConfigurationProfileScopeExclusionsComputers = getConfigurationProfile['os_x_configuration_profile']['scope']['exclusions']['computers']
+#		myConfigurationProfileScopeExclusionsComputerGroups = getConfigurationProfile['os_x_configuration_profile']['scope']['exclusions']['computer_groups']
+#		
+#		
+#		##########################################################################################
+#		# Process ConfigurationProfile information for csv / Excel
+#		##########################################################################################
+#		
+#		# Individual ConfigurationProfile Info for each record
+#		getMyConfigurationProfileID = (str(myConfigurationProfileGeneral['id']) + " - " + myConfigurationProfileGeneral['name'])
+#		getMyConfigurationProfileGeneralCatagory = (str(myConfigurationProfileGeneralCatagory['id']) + " - " + myConfigurationProfileGeneralCatagory['name'])
+#		
+#		# Get info for Policies
+#		print("Working on Configuration Profile ID: " + getMyConfigurationProfileID)
+#		
+#		formatMyConfigurationProfileGeneralCatagory = f"\"{myConfigurationProfileGeneralCatagory['name']}\""
+#		
+#		#Set Variables if Data Available
+#		if len(str(myConfigurationProfileGeneral['id'])) == 0:
+#			myConfigurationProfileGeneralID = ''
+#		else:
+#			myConfigurationProfileGeneralID = int(myConfigurationProfileGeneral['id'])
+#		
+#		#Set Variables if Data Available
+#		if len(str(myConfigurationProfileGeneralCatagory['id'])) == 0:
+#			myConfigurationProfileGeneralCatagoryID = ''
+#		else:
+#			myConfigurationProfileGeneralCatagoryID = int(myConfigurationProfileGeneralCatagory['id'])
+#			
+#			
+#		# Set Variables for Dict for Configuration Profile Info
+#		appendDataToCVS_JAMF_Configuration_Profile_Info = "{'Configuration Profile Type':'Configuration Profile',\
+#		\
+#		'Configuration Profile ID':myConfigurationProfileGeneralID,\
+#		\
+#		'Configuration Profile Name':myConfigurationProfileGeneral['name'],\
+#		\
+#		'Configuration Profile Category ID':myConfigurationProfileGeneralCatagoryID,\
+#		\
+#		'Configuration Profile Category Name':formatMyConfigurationProfileGeneralCatagory}"
+#		
+#		appendJAMF_Configuration_Profile_Info = eval(appendDataToCVS_JAMF_Configuration_Profile_Info)
+#		appendConfigProfileColumns = appendJAMF_Configuration_Profile_Info
+#		
+#		#Set Columns	
+#		Combined = MergeConfigProfileInfo(appendConfigProfileColumns, configProfileTargetsColumns, configProfileExclusionsColumns)
+#		
+#		#Set CSV File
+#		dataToCsvConfigurationProfile.append(Combined)	
+#		
+#		
+#		if get_JAMF_Configuration_Profile_Info_Targets == ("yes"):
+#			##########################################################################################		
+#			# Get info for Target Computers	
+#			##########################################################################################
+#			for computer in myConfigurationProfileScopeTargetsComputers:
+#				
+#				appendDataToCVS_JAMF_Configuration_Profile_Target_Info = "{'Configuration Profile Type':'Configuration Profile Target Computer',\
+#				\
+#				'Configuration Profile ID':myConfigurationProfileGeneralID,\
+#				\
+#				'Configuration Profile Name':myConfigurationProfileGeneral['name'],\
+#				\
+#				'Configuration Profile Category ID':myConfigurationProfileGeneralCatagoryID,\
+#				\
+#				'Configuration Profile Category Name':formatMyConfigurationProfileGeneralCatagory,\
+#				\
+#				'Configuration Profile Target Computer ID':computer['id'],\
+#				\
+#				'Configuration Profile Target Computer Name':computer['name']}"
+#				
+#				appendJAMF_Configuration_Profile_Target_Info = eval(appendDataToCVS_JAMF_Configuration_Profile_Target_Info)
+#				appendConfigProfileTargetsColumns = appendJAMF_Configuration_Profile_Target_Info
+#				
+#				#Set Columns	
+#				Combined = MergeConfigProfileInfo(configProfileColumns, appendConfigProfileTargetsColumns, configProfileExclusionsColumns)
+#				
+#				#Set CSV File
+#				dataToCsvConfigurationProfile.append(Combined)	
+#			
+#			
+#			##########################################################################################
+#			# Get Info for Target Computer Groups
+#			##########################################################################################
+#			for target in myConfigurationProfileScopeTargetsComputerGroups:
+#				
+#				targetGroupID = str(target['id'])
+#				
+#				#Get Group Info from JAMF API
+#				url = JAMF_url + "/JSSResource/computergroups/id/" + targetGroupID
+#				
+#				try:
+#					response = http.get(url, headers=btHeaders)
+#					
+#					response.raise_for_status()
+#					
+#					getTargetGroupData = response.json()
+#					
+#				except HTTPError as http_err:
+#					# Process HTTP Error
+#					check_http_err = str(http_err)
+#					split_My_http_err = check_http_err.split()
+#					
+#					myHttpError = split_My_http_err[0]
+#					myMissingRecordID = targetGroupID
+#					myMissingRecordURL = split_My_http_err[5]
+#					
+#					if myHttpError == '404':
+#						print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+#						
+#					else:
+#						print(f'HTTP error occurred: {http_err}')
+#						
+#					continue
+#				except Exception as err:
+#					print(f'Other error occurred: {err}')
+#					continue
+#					
+#				
+#				#Computer Group Element for Target Groups
+#				myTargetsComputerGroupInfo = getTargetGroupData['computer_group']
+#				
+#				#Set Variables if Data Available
+#				if len(str(myTargetsComputerGroupInfo['id'])) == 0:
+#					myTargetsComputerGroupInfoID = ''
+#				else:
+#					myTargetsComputerGroupInfoID = int(myTargetsComputerGroupInfo['id'])
+#					
+#					
+#				# Get info for Target Computer Group
+#				appendDataToCVS_JAMF_Configuration_Profile_Target_Group_Info = "{'Configuration Profile Type':'Configuration Profile Target Computer Group',\
+#				\
+#				'Configuration Profile ID':myConfigurationProfileGeneralID,\
+#				\
+#				'Configuration Profile Name':myConfigurationProfileGeneral['name'],\
+#				\
+#				'Configuration Profile Category ID':myConfigurationProfileGeneralCatagoryID,\
+#				\
+#				'Configuration Profile Category Name':formatMyConfigurationProfileGeneralCatagory,\
+#				\
+#				'Configuration Profile Target Group ID':myTargetsComputerGroupInfoID,\
+#				\
+#				'Configuration Profile Target Group Name':myTargetsComputerGroupInfo['name'],\
+#				\
+#				'Configuration Profile Target Group is Smart':str(myTargetsComputerGroupInfo['is_smart'])}"
+#				
+#				appendJAMF_Configuration_Profile_Target_Group_Info = eval(appendDataToCVS_JAMF_Configuration_Profile_Target_Group_Info)
+#				appendConfigProfileTargetGroupsColumns = appendJAMF_Configuration_Profile_Target_Group_Info
+#				
+#				#Set Columns	
+#				Combined = MergeConfigProfileInfo(configProfileColumns, appendConfigProfileTargetGroupsColumns, configProfileExclusionsColumns)
+#				
+#				#Set CSV File
+#				dataToCsvConfigurationProfile.append(Combined)
+#
+#
+#		if get_JAMF_Configuration_Profile_Info_Exclusions == ("yes"):
+#			
+#			##########################################################################################
+#			# Get info for exclusion Computers
+#			##########################################################################################
+#			for exclusion in myConfigurationProfileScopeExclusionsComputers:
+#				
+#				#Set Variables if Data Available
+#				if len(str(exclusion['id'])) == 0:
+#					exclusionID = ''
+#				else:
+#					exclusionID = int(exclusion['id'])
+#					
+#					
+#				appendDataToCVS_JAMF_Configuration_Profile_Exclusion_Info = "{'Configuration Profile Type':'Configuration Profile Exclusion Computers',\
+#				\
+#				'Configuration Profile ID':myConfigurationProfileGeneralID,\
+#				\
+#				'Configuration Profile Name':myConfigurationProfileGeneral['name'],\
+#				\
+#				'Configuration Profile Category ID':myConfigurationProfileGeneralCatagoryID,\
+#				\
+#				'Configuration Profile Category Name':formatMyConfigurationProfileGeneralCatagory,\
+#				\
+#				'Configuration Profile Exclusion Computer id':exclusionID,\
+#				\
+#				'Configuration Profile Exclusion Computer Name':exclusion['name']}"
+#				
+#				appendJAMF_Configuration_Profile_Exclusion_Info = eval(appendDataToCVS_JAMF_Configuration_Profile_Exclusion_Info)
+#				appendConfigProfileExclusionsColumns = appendJAMF_Configuration_Profile_Exclusion_Info
+#				
+#				#Set Columns	
+#				Combined = MergeConfigProfileInfo(configProfileColumns, configProfileTargetsColumns, appendConfigProfileExclusionsColumns)
+#				
+#				#Set CSV File
+#				dataToCsvConfigurationProfile.append(Combined)	
+#				
+#			
+#			##########################################################################################
+#			#Get Info for Computer Exclusions groups
+#			##########################################################################################
+#			for exclusion in myConfigurationProfileScopeExclusionsComputerGroups:
+#				
+#				exclusionGroupID = str(exclusion['id'])
+#				
+#				#Get Group Info from JAMF API
+#				url = JAMF_url + "/JSSResource/computergroups/id/" + exclusionGroupID
+#				
+#				try:
+#					response = http.get(url, headers=btHeaders)
+#					
+#					response.raise_for_status()
+#					
+#					getExclusionGroupData = response.json()
+#					
+#				except HTTPError as http_err:
+#					# Process HTTP Error
+#					check_http_err = str(http_err)
+#					split_My_http_err = check_http_err.split()
+#					
+#					myHttpError = split_My_http_err[0]
+#					myMissingRecordID = exclusionGroupID
+#					myMissingRecordURL = split_My_http_err[5]
+#					
+#					if myHttpError == '404':
+#						print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+#						
+#					else:
+#						print(f'HTTP error occurred: {http_err}')
+#						
+#					continue
+#				except Exception as err:
+#					print(f'Other error occurred: {err}')
+#					continue
+#					
+#				
+#				myExclusionsComputerGroupInfo = getExclusionGroupData['computer_group']
+#				
+#				#Set Variables if Data Available
+#				if len(str(myExclusionsComputerGroupInfo['id'])) == 0:
+#					myExclusionsComputerGroupInfoID = ''
+#				else:
+#					myExclusionsComputerGroupInfoID = int(myExclusionsComputerGroupInfo['id'])
+#					
+#					
+#				appendDataToCVS_JAMF_Configuration_Profile_Exclusion_Groups_Info = "{'Configuration Profile Type':'Configuration Profile Exclusion Computer Groups',\
+#				\
+#				'Configuration Profile ID':myConfigurationProfileGeneralID,\
+#				\
+#				'Configuration Profile Name':myConfigurationProfileGeneral['name'],\
+#				\
+#				'Configuration Profile Category ID':myConfigurationProfileGeneralCatagoryID,\
+#				\
+#				'Configuration Profile Category Name':formatMyConfigurationProfileGeneralCatagory,\
+#				\
+#				'Configuration Profile Exclusion Group id':myExclusionsComputerGroupInfoID,\
+#				\
+#				'Configuration Profile Exclusion Group Name':myExclusionsComputerGroupInfo['name'],\
+#				\
+#				'Configuration Profile Exclusion Group is Smart':str(myExclusionsComputerGroupInfo['is_smart'])}"
+#				
+#				appendJAMF_Configuration_Profile_Exclusion_Groups_Info = eval(appendDataToCVS_JAMF_Configuration_Profile_Exclusion_Groups_Info)
+#				appendConfigProfileExclusionsGroupsColumns = appendJAMF_Configuration_Profile_Exclusion_Groups_Info
+#				
+#				#Set Columns	
+#				Combined = MergeConfigProfileInfo(configProfileColumns, configProfileTargetsColumns, appendConfigProfileExclusionsGroupsColumns)
+#				
+#				#Set CSV File
+#				dataToCsvConfigurationProfile.append(Combined)	
+	
+	# Start New MultiProcess Code here
+	
+	list_of_configuration_profiles = []
+	
+	for configurationProfile in configurationProfiles :
+		configurationProfileID = str(configurationProfile['id']) 
+		list_of_configuration_profiles.append(f'{configurationProfileID}')
+		
 		
 		#Renew token because the report is a long process
 		#renew token
-		url = JAMF_url+"/api/v1/auth/keep-alive"
-		
-		token = http.post(url, headers=btHeaders)
-		
-		bearer = token.json()['token']
-		
-		btHeaders = {
-			'Accept': 'application/json',
-			'Authorization': 'Bearer '+bearer
-		}
-		
-		# Get configurationProfile ID to do JAMF API lookup
-		configurationProfileID = str(configurationProfile['id']) 
+	url = JAMF_url+"/api/v1/auth/keep-alive"
 	
-		#For Testing
-		#print(configurationProfileID)
+	token = http.post(url, headers=btHeaders)
+	
+	bearer = token.json()['token']
+	
+	btHeaders = {
+		'Accept': 'application/json',
+		'Authorization': 'Bearer '+bearer
+	}
+	
+	
+	def get_clean_List(url, configurationProfileIDList):
 		
-		# Set up url for getting information from each configurationProfile ID from JAMF API
-		url = JAMF_url + "/JSSResource/osxconfigurationprofiles/id/" + configurationProfileID
+		myURL = (f"{url}/JSSResource/osxconfigurationprofiles/id/{configurationProfileIDList}")
+		
+		test = http.get(myURL, headers=btHeaders)
+		
+		if test.status_code != 200:
+			list_of_configuration_profiles.remove(configurationProfileIDList)
+			
+			
+			
+	def get_url(url, configurationProfileIDList):
+		
+		getConfigurationProfile = ''
+		
+		myURL = (f"{url}/JSSResource/osxconfigurationprofiles/id/{configurationProfileIDList}")
 		
 		try:
-			response = http.get(url, headers=btHeaders)
+			
+			response = http.get(myURL, headers=btHeaders)
 			
 			response.raise_for_status()
 			
 			getConfigurationProfile = response.json()
 			
 		except HTTPError as http_err:
+			
 			# Process HTTP Error
 			check_http_err = str(http_err)
 			split_My_http_err = check_http_err.split()
 			
 			myHttpError = split_My_http_err[0]
-			myMissingRecordID = configurationProfileID
+			myMissingRecordID = configurationProfileIDList
 			myMissingRecordURL = split_My_http_err[5]
 			
 			if myHttpError == '404':
@@ -3719,31 +5329,77 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 			else:
 				print(f'HTTP error occurred: {http_err}')
 				
-			continue
 		except Exception as err:
 			print(f'Other error occurred: {err}')
-			continue
 			
+			
+		return getConfigurationProfile
+	
+	
+	# Clean List
+	with ThreadPoolExecutor(max_workers=100) as pool:
+		get_data = partial(get_clean_List, JAMF_url)
+		list(pool.map(get_data,list_of_configuration_profiles))
 		
-		# For Testing
-		#print(getConfigurationProfile)
 		
+	#print(list_of_policies)
+		
+		
+	#Renew token because the report is a long process
+	#renew token
+	url = JAMF_url+"/api/v1/auth/keep-alive"
+	
+	token = http.post(url, headers=btHeaders)
+	
+	bearer = token.json()['token']
+	
+	btHeaders = {
+		'Accept': 'application/json',
+		'Authorization': 'Bearer '+bearer
+	}
+	
+	
+	# Process List	
+	with ThreadPoolExecutor(max_workers=100) as pool:
+		get_data = partial(get_url, JAMF_url)
+		response_list = list(pool.map(get_data,list_of_configuration_profiles))
+		
+		#print(response_list)
+		
+		
+	#Renew token because the report is a long process
+	#renew token
+	url = JAMF_url+"/api/v1/auth/keep-alive"
+	
+	token = http.post(url, headers=btHeaders)
+	
+	bearer = token.json()['token']
+	
+	btHeaders = {
+		'Accept': 'application/json',
+		'Authorization': 'Bearer '+bearer
+	}
+	
+	
+	def processData(response):
+		global btHeaders
+		# Make sure to refresh variables for each loop
 		#General Element for ID and Catagory
-		myConfigurationProfileGeneral = getConfigurationProfile['os_x_configuration_profile']['general']
-		myConfigurationProfileGeneralCatagory = getConfigurationProfile['os_x_configuration_profile']['general']['category']
+		myConfigurationProfileGeneral = response['os_x_configuration_profile']['general']
+		myConfigurationProfileGeneralCatagory = response['os_x_configuration_profile']['general']['category']
 		
 		#Scope Element for Computer Targets
-		myConfigurationProfileScopeTargetsAllComputers = getConfigurationProfile['os_x_configuration_profile']['scope']['all_computers']
-		myConfigurationProfileScopeTargetsComputers = getConfigurationProfile['os_x_configuration_profile']['scope']['computers']
-		myConfigurationProfileScopeTargetsComputerGroups = getConfigurationProfile['os_x_configuration_profile']['scope']['computer_groups']
+		myConfigurationProfileScopeTargetsAllComputers = response['os_x_configuration_profile']['scope']['all_computers']
+		myConfigurationProfileScopeTargetsComputers = response['os_x_configuration_profile']['scope']['computers']
+		myConfigurationProfileScopeTargetsComputerGroups = response['os_x_configuration_profile']['scope']['computer_groups']
 		
 		#Scope Element For Limitation
-		myConfigurationProfileScopeLimitationsUsers = getConfigurationProfile['os_x_configuration_profile']['scope']['limitations']['users']
-		myConfigurationProfileScopeLimitationsUserGroups = getConfigurationProfile['os_x_configuration_profile']['scope']['limitations']['user_groups']
+		myConfigurationProfileScopeLimitationsUsers = response['os_x_configuration_profile']['scope']['limitations']['users']
+		myConfigurationProfileScopeLimitationsUserGroups = response['os_x_configuration_profile']['scope']['limitations']['user_groups']
 		
 		#Scope Element For Exclusions
-		myConfigurationProfileScopeExclusionsComputers = getConfigurationProfile['os_x_configuration_profile']['scope']['exclusions']['computers']
-		myConfigurationProfileScopeExclusionsComputerGroups = getConfigurationProfile['os_x_configuration_profile']['scope']['exclusions']['computer_groups']
+		myConfigurationProfileScopeExclusionsComputers = response['os_x_configuration_profile']['scope']['exclusions']['computers']
+		myConfigurationProfileScopeExclusionsComputerGroups = response['os_x_configuration_profile']['scope']['exclusions']['computer_groups']
 		
 		
 		##########################################################################################
@@ -3764,7 +5420,7 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 			myConfigurationProfileGeneralID = ''
 		else:
 			myConfigurationProfileGeneralID = int(myConfigurationProfileGeneral['id'])
-		
+			
 		#Set Variables if Data Available
 		if len(str(myConfigurationProfileGeneralCatagory['id'])) == 0:
 			myConfigurationProfileGeneralCatagoryID = ''
@@ -3790,14 +5446,36 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 		Combined = MergeConfigProfileInfo(appendConfigProfileColumns, configProfileTargetsColumns, configProfileExclusionsColumns)
 		
 		#Set CSV File
-		dataToCsvConfigurationProfile.append(Combined)	
-		
+		dataToCsvConfigurationProfile.append(Combined)
 		
 		if get_JAMF_Configuration_Profile_Info_Targets == ("yes"):
 			##########################################################################################		
 			# Get info for Target Computers	
 			##########################################################################################
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
 			for computer in myConfigurationProfileScopeTargetsComputers:
+				
+				#Set Variables if Data Available
+				if len(str(computer['id'])) == 0:
+					computerID = ''
+				else:
+					computerID = int(computer['id'])
+					
+				# Get info for Policies
+				print(f"Working on Computer ID: {computerID}")
 				
 				appendDataToCVS_JAMF_Configuration_Profile_Target_Info = "{'Configuration Profile Type':'Configuration Profile Target Computer',\
 				\
@@ -3820,33 +5498,68 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 				Combined = MergeConfigProfileInfo(configProfileColumns, appendConfigProfileTargetsColumns, configProfileExclusionsColumns)
 				
 				#Set CSV File
-				dataToCsvConfigurationProfile.append(Combined)	
-			
-			
+				dataToCsvConfigurationProfile.append(Combined)
+				
+				
 			##########################################################################################
 			# Get Info for Target Computer Groups
 			##########################################################################################
+			# Start New MultiProcess Code here
+				
+			list_of_Targets = []
+			
 			for target in myConfigurationProfileScopeTargetsComputerGroups:
+				targetID = str(target['id']) 
+				list_of_Targets.append(f'{targetID}')
 				
-				targetGroupID = str(target['id'])
 				
-				#Get Group Info from JAMF API
-				url = JAMF_url + "/JSSResource/computergroups/id/" + targetGroupID
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
+			def get_clean_List(url, targetIDList):
+				
+				myURL = (f"{url}/JSSResource/computergroups/id/{targetIDList}")
+				
+				test = http.get(myURL, headers=btHeaders)
+				
+				if test.status_code != 200:
+					list_of_Targets.remove(targetIDList)
+					
+					
+					
+			def get_url(url, targetIDList):
+				
+				getTargetGroupData = ''
+				
+				myURL = (f"{url}/JSSResource/computergroups/id/{targetIDList}")
 				
 				try:
-					response = http.get(url, headers=btHeaders)
+					
+					response = http.get(myURL, headers=btHeaders)
 					
 					response.raise_for_status()
 					
 					getTargetGroupData = response.json()
 					
 				except HTTPError as http_err:
+					
 					# Process HTTP Error
 					check_http_err = str(http_err)
 					split_My_http_err = check_http_err.split()
 					
 					myHttpError = split_My_http_err[0]
-					myMissingRecordID = targetGroupID
+					myMissingRecordID = targetIDList
 					myMissingRecordURL = split_My_http_err[5]
 					
 					if myHttpError == '404':
@@ -3855,14 +5568,49 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 					else:
 						print(f'HTTP error occurred: {http_err}')
 						
-					continue
 				except Exception as err:
 					print(f'Other error occurred: {err}')
-					continue
 					
+					
+				return getTargetGroupData
+			
+			
+			# Clean List
+			with ThreadPoolExecutor(max_workers=100) as pool:
+				get_data = partial(get_clean_List, JAMF_url)
+				list(pool.map(get_data,list_of_Targets))
 				
-				#Computer Group Element for Target Groups
-				myTargetsComputerGroupInfo = getTargetGroupData['computer_group']
+				
+			#print(list_of_policies)	
+				
+				
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
+			# Process List	
+			with ThreadPoolExecutor(max_workers=100) as pool:
+				get_data = partial(get_url, JAMF_url)
+				response_list = list(pool.map(get_data,list_of_Targets))
+				
+				
+			#print(response_list)
+				
+				
+			for response in response_list:
+			##	# Make sure to refresh variables for each loop
+				myTargetsComputerGroupInfo = response['computer_group']
+				
 				
 				#Set Variables if Data Available
 				if len(str(myTargetsComputerGroupInfo['id'])) == 0:
@@ -3870,7 +5618,10 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 				else:
 					myTargetsComputerGroupInfoID = int(myTargetsComputerGroupInfo['id'])
 					
-					
+				# Get info for Policies
+				print(f"Working on Target Group ID: {myTargetsComputerGroupInfoID}")
+				
+				
 				# Get info for Target Computer Group
 				appendDataToCVS_JAMF_Configuration_Profile_Target_Group_Info = "{'Configuration Profile Type':'Configuration Profile Target Computer Group',\
 				\
@@ -3896,13 +5647,27 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 				
 				#Set CSV File
 				dataToCsvConfigurationProfile.append(Combined)
-
-
+				
+				
+				
 		if get_JAMF_Configuration_Profile_Info_Exclusions == ("yes"):
-			
 			##########################################################################################
 			# Get info for exclusion Computers
 			##########################################################################################
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
 			for exclusion in myConfigurationProfileScopeExclusionsComputers:
 				
 				#Set Variables if Data Available
@@ -3911,7 +5676,10 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 				else:
 					exclusionID = int(exclusion['id'])
 					
-					
+				# Get info for Policies
+				print(f"Working on Target Group ID: {exclusionID}")
+				
+				
 				appendDataToCVS_JAMF_Configuration_Profile_Exclusion_Info = "{'Configuration Profile Type':'Configuration Profile Exclusion Computers',\
 				\
 				'Configuration Profile ID':myConfigurationProfileGeneralID,\
@@ -3935,31 +5703,66 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 				#Set CSV File
 				dataToCsvConfigurationProfile.append(Combined)	
 				
+				
+			##########################################################################################
+			# Get Info for Computer Exclusions groups
+			##########################################################################################
+			# Start New MultiProcess Code here
+				
+			list_of_Exclusions = []
 			
-			##########################################################################################
-			#Get Info for Computer Exclusions groups
-			##########################################################################################
 			for exclusion in myConfigurationProfileScopeExclusionsComputerGroups:
+				exclusionID = str(exclusion['id']) 
+				list_of_Exclusions.append(f'{exclusionID}')
 				
-				exclusionGroupID = str(exclusion['id'])
 				
-				#Get Group Info from JAMF API
-				url = JAMF_url + "/JSSResource/computergroups/id/" + exclusionGroupID
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
+			def get_clean_List(url, exclusionIDList):
+				
+				myURL = (f"{url}/JSSResource/computergroups/id/{exclusionIDList}")
+				
+				test = http.get(myURL, headers=btHeaders)
+				
+				if test.status_code != 200:
+					list_of_Exclusions.remove(exclusionIDList)
+					
+					
+					
+			def get_url(url, exclusionIDList):
+				
+				getExclusionGroupData = ''
+				
+				myURL = (f"{url}/JSSResource/computergroups/id/{exclusionIDList}")
 				
 				try:
-					response = http.get(url, headers=btHeaders)
+					
+					response = http.get(myURL, headers=btHeaders)
 					
 					response.raise_for_status()
 					
 					getExclusionGroupData = response.json()
 					
 				except HTTPError as http_err:
+					
 					# Process HTTP Error
 					check_http_err = str(http_err)
 					split_My_http_err = check_http_err.split()
 					
 					myHttpError = split_My_http_err[0]
-					myMissingRecordID = exclusionGroupID
+					myMissingRecordID = exclusionIDList
 					myMissingRecordURL = split_My_http_err[5]
 					
 					if myHttpError == '404':
@@ -3968,13 +5771,48 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 					else:
 						print(f'HTTP error occurred: {http_err}')
 						
-					continue
 				except Exception as err:
 					print(f'Other error occurred: {err}')
-					continue
 					
+					
+				return getExclusionGroupData
+			
+			
+			# Clean List
+			with ThreadPoolExecutor(max_workers=100) as pool:
+				get_data = partial(get_clean_List, JAMF_url)
+				list(pool.map(get_data,list_of_Exclusions))
 				
-				myExclusionsComputerGroupInfo = getExclusionGroupData['computer_group']
+				
+			#print(list_of_policies)	
+				
+				
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
+			# Process List	
+			with ThreadPoolExecutor(max_workers=100) as pool:
+				get_data = partial(get_url, JAMF_url)
+				response_list = list(pool.map(get_data,list_of_Exclusions))
+				
+				
+			#print(response_list)
+				
+				
+			for response in response_list:
+			##	# Make sure to refresh variables for each loop
+				myExclusionsComputerGroupInfo = response['computer_group']
 				
 				#Set Variables if Data Available
 				if len(str(myExclusionsComputerGroupInfo['id'])) == 0:
@@ -3982,7 +5820,10 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 				else:
 					myExclusionsComputerGroupInfoID = int(myExclusionsComputerGroupInfo['id'])
 					
-					
+				# Get info for Policies
+				print(f"Working on Exclusion Group ID: {myExclusionsComputerGroupInfoID}")
+				
+				
 				appendDataToCVS_JAMF_Configuration_Profile_Exclusion_Groups_Info = "{'Configuration Profile Type':'Configuration Profile Exclusion Computer Groups',\
 				\
 				'Configuration Profile ID':myConfigurationProfileGeneralID,\
@@ -4007,6 +5848,25 @@ if get_JAMF_Configuration_Profile_Info == ("yes"):
 				
 				#Set CSV File
 				dataToCsvConfigurationProfile.append(Combined)	
+				
+				
+	#Renew token because the report is a long process
+	#renew token
+	url = JAMF_url+"/api/v1/auth/keep-alive"
+	
+	token = http.post(url, headers=btHeaders)
+	
+	bearer = token.json()['token']
+	
+	btHeaders = {
+		'Accept': 'application/json',
+		'Authorization': 'Bearer '+bearer
+	}
+	
+	
+	# Process List
+	with ThreadPoolExecutor(max_workers=100) as pool:
+		list(pool.map(processData,response_list))
 
 	
 ##########################################################################################
@@ -4022,6 +5882,9 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 	
 	# Set up list
 	policyPackagesList = []
+	preStagePolicyPackagesList = []
+	patchManagementPolicyPackagesList = []
+	
 	
 	try:
 		policyResponse = http.get(url, headers=btHeaders)
@@ -4122,6 +5985,117 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 	
 	#For testing
 	#print(policyPackagesList)	
+	
+	
+#	if includePackageToPatchPolicyInfo == ("yes"):
+#		##########################################################################################
+#		# Process Package to Patch Policies information for csv / Excel
+#		##########################################################################################
+#		# Set up url for getting a list of all Package to Regular Policies from JAMF API
+#		url = JAMF_url + "/JSSResource/patchpolicies"
+#		
+#		# Set up list
+#		patchPolicyPackagesList = []
+#		
+#		try:
+#			policyResponse = http.get(url, headers=btHeaders)
+#			
+#			policyResponse.raise_for_status()
+#			
+#			resp = policyResponse.json()
+#			
+#		except HTTPError as http_err:
+#			print(f'HTTP error occurred: {http_err}')
+#		except Exception as err:
+#			print(f'Other error occurred: {err}')	
+#			
+#		#For Testing
+#		#print(resp)
+#			
+#		policyRecords = resp['policies']
+#		policyRecords.sort(key=lambda item: item.get('id'), reverse=False)
+#		
+#		
+#		for policy in policyRecords:
+#			
+#			#Renew token because the report is a long process
+#			#renew token
+#			url = JAMF_url+"/api/v1/auth/keep-alive"
+#			
+#			token = http.post(url, headers=btHeaders)
+#			
+#			bearer = token.json()['token']
+#			
+#			btHeaders = {
+#				'Accept': 'application/json',
+#				'Authorization': 'Bearer '+bearer
+#			}
+#			
+#			# Get Policy ID to do JAMF API lookup 
+#			policyRecordsID = str(policy['id']) 
+#			
+#			#	For Testing
+#			#print(policyRecordsID)
+#			
+#			# Set up url for getting information from each policy ID from JAMF API
+#			url = JAMF_url + "/JSSResource/policies/id/" + policyRecordsID
+#			
+#			try:
+#				PolicyRecordsResponse = http.get(url, headers=btHeaders)
+#				
+#				PolicyRecordsResponse.raise_for_status()
+#				
+#				getPolicyRecords = PolicyRecordsResponse.json()
+#				
+#			except HTTPError as http_err:
+#				# Process HTTP Error
+#				check_http_err = str(http_err)
+#				split_My_http_err = check_http_err.split()
+#				
+#				myHttpError = split_My_http_err[0]
+#				myMissingRecordID = policyRecordsID
+#				myMissingRecordURL = split_My_http_err[5]
+#				
+#				if myHttpError == '404':
+#					print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+#					
+#				else:
+#					print(f'HTTP error occurred: {http_err}')
+#					
+#				continue
+#			except Exception as err:
+#				print(f'Other error occurred: {err}')
+#				continue
+#			
+#			# For Testing
+#			#print(getPolicyRecords)
+#			
+#			#Get policy ID and Name for report
+#			policyInfoID = getPolicyRecords['policy']['general']['id']
+#			policyInfoName = getPolicyRecords['policy']['general']['name']
+#			
+#			# Find the package data in each policy
+#			policyPackageInfo = getPolicyRecords['policy']['package_configuration']['packages']
+#			
+#			
+#			# Individual Policy Info for each record
+#			getMyPolicyIDList = (str(policyInfoID) + " - " + policyInfoName)
+#			
+#			# Get info for Policies
+#			print("Gathering List for Package Info from Policy ID: " + getMyPolicyIDList)
+#			
+#			
+#			#Get Package ID from Policy to compare and find unused packages.
+#			for policyPackage in policyPackageInfo:
+#				
+#				#get package info for dict
+#				policyPackagesDict = {'Policy ID': policyInfoID, 'Policy Name': policyInfoName, 'Package ID': str(policyPackage['id'])}
+#				
+#				policyPackagesList.append(policyPackagesDict)
+#				
+#				
+#		#For testing
+#		#print(policyPackagesList)
 
 
 	if includePreStagePackageToPolicyInfo == ("yes"):
@@ -4131,7 +6105,6 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 		# Set up url for getting a list of all Package to PreStage Policies from JAMF API
 		PSURL = JAMF_url + "/api/v2/computer-prestages"
 		
-		preStagePolicyPackagesList = []
 		
 		try:
 			preStagePolicyPackagesResponse = http.get(PSURL, headers=btHeaders)
@@ -4188,7 +6161,120 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 				
 		#print(preStagePolicyPackagesList)
 	
-
+	if includePatchManagementPackageToPolicyInfo == ("yes"):
+		##########################################################################################
+		# Process Package to PreStage Policies information for csv / Excel
+		##########################################################################################
+		# Set up url for getting a list of all Package to PreStage Policies from JAMF API
+		allPatchPolicies = JAMF_url + "/JSSResource/patchpolicies"
+		patchPoliciesByID = JAMF_url + "/JSSResource/patchpolicies/id/"
+		patchSoftwareTitlesByID = JAMF_url + "/JSSResource/patchsoftwaretitles/id/"
+		
+		
+		# Find all patch Policy ID
+		try:
+			patchManagementPolicyPackagesResponse = http.get(allPatchPolicies, headers=headers, auth = HTTPBasicAuth(username, password))
+			
+			patchManagementPolicyPackagesResponse.raise_for_status()
+			
+			resp = patchManagementPolicyPackagesResponse.json()
+			
+		except HTTPError as http_err:
+			print(f'HTTP error occurred: {http_err}')
+		except Exception as err:
+			print(f'Other error occurred: {err}')	
+			
+		#For Testing
+		#print(resp)
+			
+		# Get ID from patch policy
+		patchPolicy = resp['patch_policies']
+		
+		
+		# Find Patch Policiy ID
+		for policy in patchPolicy :
+			
+			#Renew token because the report is a long process
+			#renew token
+			url = JAMF_url+"/api/v1/auth/keep-alive"
+			
+			token = http.post(url, headers=btHeaders)
+			
+			bearer = token.json()['token']
+			
+			btHeaders = {
+				'Accept': 'application/json',
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			btBrokenXMLHeaders = {
+				"Accept": "application/xml, application/json",
+				"Content-Type": "application/xml",
+				'Authorization': 'Bearer '+bearer
+			}
+			
+			
+			patchManagementID = str(policy['id'])
+			
+			# Get info for Policies
+			print("Gathering List for Package Info from Patch Management Policy ID: " + patchManagementID)
+			
+			try:
+				patchManagementPolicyPackagesResponseID = http.get(patchPoliciesByID+patchManagementID, headers=btHeaders)
+				
+				patchManagementPolicyPackagesResponseID.raise_for_status()
+				
+				resp = patchManagementPolicyPackagesResponseID.json()
+				
+			except HTTPError as http_err:
+				print(f'HTTP error occurred: {http_err}')
+			except Exception as err:
+				print(f'Other error occurred: {err}')	
+				
+			#For Testing
+			#print(resp['patch_policy']['software_title_configuration_id'])
+				
+			pmSoftwareTitleConfigurationID = str(resp['patch_policy']['software_title_configuration_id'])
+			
+			#print(pmSoftwareTitleConfigurationID)
+			
+			try:
+				patchManagementSoftwareTitleConfigurationInfo = http.get(patchSoftwareTitlesByID+pmSoftwareTitleConfigurationID, headers=btBrokenXMLHeaders)
+				
+				patchManagementSoftwareTitleConfigurationInfo.raise_for_status()
+				
+				resp = xmltodict.parse(patchManagementSoftwareTitleConfigurationInfo.content)
+				
+			except HTTPError as http_err:
+				print(f'HTTP error occurred: {http_err}')
+			except Exception as err:
+				print(f'Other error occurred: {err}')	
+				
+			#For Testing
+			#print(resp['patch_software_title'])
+				
+			patchManagementPolicyDisplayName = resp['patch_software_title']['name']
+			pmSoftwareTitleVersionInfo = resp['patch_software_title']['versions']['version']
+			
+			for version in pmSoftwareTitleVersionInfo :
+				packageInfo = version['package']
+				pmSoftwareVersionName = version['software_version']
+				
+				if packageInfo != None :
+					#print(packageInfo['id'])
+					#print(packageInfo['name'])
+					
+					patchManagementPackageID = str(packageInfo['id'])
+					patchManagementSoftwareVersionName = pmSoftwareVersionName
+					
+					patchManagementPolicyPackagesDict = {'Patch Management ID': patchManagementID, 'Patch Management Display Name': patchManagementPolicyDisplayName, 'Patch Management Software Version Name': patchManagementSoftwareVersionName, 'Package ID': patchManagementPackageID}
+					
+					patchManagementPolicyPackagesList.append(patchManagementPolicyPackagesDict)
+					
+					
+		#print(patchManagementPolicyPackagesList)
+	
+	
 	##########################################################################################
 	# lookup package information and compair to dict and list to find what is in use.
 	##########################################################################################
@@ -4251,7 +6337,7 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 		
 		
 		#Process Info for packages to policies
-		if checkIfPackageIsUsedInPolicy(preStagePolicyPackagesList, key, value) and checkIfPackageIsUsedInPolicy(policyPackagesList, key, value):
+		if checkIfPackageIsUsedInPolicy(policyPackagesList, key, value) and checkIfPackageIsUsedInPolicy(preStagePolicyPackagesList, key, value) and checkIfPackageIsUsedInPolicy(patchManagementPolicyPackagesList, key, value):
 			
 			for policy in policyPackagesList:
 				
@@ -4428,8 +6514,101 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 					
 					# For Testing
 					#print(f"Yes, Package ID: " + myCurrentPackageID + " with Package Name: " + myCurrentPackageName + " and Package FileName: "+ myPackageRecordsFileName + " is being used in PreStage Policies ID: " + myCurrentPreStagePolicyID + " with PreStage Display Name: " + myCurrentPreStagePolicyName)
-					
 			
+			
+			for patchManagementPolicy in patchManagementPolicyPackagesList:
+				
+				patchManagementPolicyPackageID = patchManagementPolicy['Package ID']
+				
+				checkPatchManagementPolicyListID = str(patchManagementPolicyPackageID)
+				checkPackageRecordsID = str(packageRecordsID)
+				
+				if checkPatchManagementPolicyListID == checkPackageRecordsID:
+					
+					# Set up url for getting information from each policy ID from JAMF API
+					url = JAMF_url + "/JSSResource/packages/id/" + str(packageRecordsID)
+					
+					try:
+						myPackageRecordsResponse = http.get(url, headers=headers, auth = HTTPBasicAuth('jamf-api', 'J@MF@P!acc3s$'))
+						
+						myPackageRecordsResponse.raise_for_status()
+						
+						getMyPackageRecords = myPackageRecordsResponse.json()
+						
+					except HTTPError as http_err:
+						# Process HTTP Error
+						check_http_err = str(http_err)
+						split_My_http_err = check_http_err.split()
+						
+						myHttpError = split_My_http_err[0]
+						myMissingRecordID = str(packageRecordsID)
+						myMissingRecordURL = split_My_http_err[5]
+						
+						if myHttpError == '404':
+							print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+							
+						else:
+							print(f'HTTP error occurred: {http_err}')
+							
+						continue
+					except Exception as err:
+						print(f'Other error occurred: {err}')
+						continue
+					
+					
+					
+					#print(getMyPackageRecords['package']['id'])
+					
+					
+					#Set Variables if Data Available
+					if len(str(getMyPackageRecords['package']['id'])) == 0:
+						myCurrentPackageID = ''
+					else:
+						myCurrentPackageID = int(getMyPackageRecords['package']['id'])
+						
+					myCurrentPackageName =  getMyPackageRecords['package']['name']
+					myPackageRecordsFileName = getMyPackageRecords['package']['filename']
+					
+					if len(str(patchManagementPolicy['Patch Management ID'])) == 0:
+						myCurrentPatchManagementPolicyID = ''
+					else:
+						myCurrentPatchManagementPolicyID = int(patchManagementPolicy['Patch Management ID'])
+						
+					myCurrentPatchManagementPolicyName = patchManagementPolicy['Patch Management Display Name']
+					
+					myCurrentPatchManagementPolicySoftwareVersionName = patchManagementPolicy['Patch Management Software Version Name']
+					
+					
+					appendDataToCVS_JAMF_Package_To_Patch_Management_Policy_Info = "{'Type':'Package Used',\
+					\
+					'Package List':'Patch Management Policy',\
+					\
+					'Package ID':myCurrentPackageID,\
+					\
+					'Package Name':myCurrentPackageName,\
+					\
+					'Package File Name':myPackageRecordsFileName,\
+					\
+					'Patch Management Policy ID':myCurrentPatchManagementPolicyID,\
+					\
+					'Patch Management Policy Name':myCurrentPatchManagementPolicyName,	\
+					\
+					'Patch Management Policy Software Version Name':myCurrentPatchManagementPolicySoftwareVersionName}"
+					
+					
+					appendJAMF_Package_To_Patch_Management_Policy_Info = eval(appendDataToCVS_JAMF_Package_To_Patch_Management_Policy_Info)
+					appendPackageToPatchManagementPolicyColumns = appendJAMF_Package_To_Patch_Management_Policy_Info
+					
+					#Set Columns	
+					Combined = appendPackageToPatchManagementPolicyColumns
+					
+					#Set CSV File
+					dataToCsvPackageToPolicy.append(Combined)
+					
+					# For Testing
+					#print(f"Yes, Package ID: " + myCurrentPackageID + " with Package Name: " + myCurrentPackageName + " and Package FileName: "+ myPackageRecordsFileName + " is being used in Patch Management Policies ID: " + myCurrentPatchManagementPolicyID + " with Patch Management Display Name: " + myCurrentPatchManagementPolicyID + " with Patch Management Display Software Version Name: " + myCurrentPatchManagementPolicySoftwareVersionName)
+					
+					
 		elif checkIfPackageIsUsedInPolicy(policyPackagesList, key, value):
 			
 			for policy in policyPackagesList:
@@ -4611,8 +6790,103 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 					
 					# For Testing
 					#print(f"Yes, Package ID: " + myCurrentPackageID + " with Package Name: " + myCurrentPackageName + " and Package FileName: "+ myPackageRecordsFileName + " is being used in PreStage Policies ID: " + myCurrentPreStagePolicyID + " with PreStage Display Name: " + myCurrentPreStagePolicyName)
+		
+		
+		elif checkIfPackageIsUsedInPolicy(patchManagementPolicyPackagesList, key, value):
 			
-			
+			for patchManagementPolicy in patchManagementPolicyPackagesList:
+				
+				patchManagementPolicyPackageID = patchManagementPolicy['Package ID']
+				
+				checkPatchManagementPolicyListID = str(patchManagementPolicyPackageID)
+				checkPackageRecordsID = str(packageRecordsID)
+				
+				if checkPatchManagementPolicyListID == checkPackageRecordsID:
+					
+					# Set up url for getting information from each policy ID from JAMF API
+					url = JAMF_url + "/JSSResource/packages/id/" + str(packageRecordsID)
+					
+					try:
+						myPackageRecordsResponse = http.get(url, headers=headers, auth = HTTPBasicAuth('jamf-api', 'J@MF@P!acc3s$'))
+						
+						myPackageRecordsResponse.raise_for_status()
+						
+						getMyPackageRecords = myPackageRecordsResponse.json()
+						
+					except HTTPError as http_err:
+						# Process HTTP Error
+						check_http_err = str(http_err)
+						split_My_http_err = check_http_err.split()
+						
+						myHttpError = split_My_http_err[0]
+						myMissingRecordID = str(packageRecordsID)
+						myMissingRecordURL = split_My_http_err[5]
+						
+						if myHttpError == '404':
+							print(f".......We found that Record: {myMissingRecordID}, does not exist in your JAMF Instance at URL: {myMissingRecordURL}")
+							
+						else:
+							print(f'HTTP error occurred: {http_err}')
+							
+						continue
+					except Exception as err:
+						print(f'Other error occurred: {err}')
+						continue
+					
+					
+					
+					#print(getMyPackageRecords['package']['id'])
+					
+					
+					#Set Variables if Data Available
+					if len(str(getMyPackageRecords['package']['id'])) == 0:
+						myCurrentPackageID = ''
+					else:
+						myCurrentPackageID = int(getMyPackageRecords['package']['id'])
+						
+					myCurrentPackageName =  getMyPackageRecords['package']['name']
+					myPackageRecordsFileName = getMyPackageRecords['package']['filename']
+					
+					if len(str(patchManagementPolicy['Patch Management ID'])) == 0:
+						myCurrentPatchManagementPolicyID = ''
+					else:
+						myCurrentPatchManagementPolicyID = int(patchManagementPolicy['Patch Management ID'])
+						
+					myCurrentPatchManagementPolicyName = patchManagementPolicy['Patch Management Display Name']
+					
+					myCurrentPatchManagementPolicySoftwareVersionName = patchManagementPolicy['Patch Management Software Version Name']
+					
+					
+					appendDataToCVS_JAMF_Package_To_Patch_Management_Policy_Info = "{'Type':'Package Used',\
+					\
+					'Package List':'Patch Management Policy',\
+					\
+					'Package ID':myCurrentPackageID,\
+					\
+					'Package Name':myCurrentPackageName,\
+					\
+					'Package File Name':myPackageRecordsFileName,\
+					\
+					'Patch Management Policy ID':myCurrentPatchManagementPolicyID,\
+					\
+					'Patch Management Policy Name':myCurrentPatchManagementPolicyName,	\
+					\
+					'Patch Management Policy Software Version Name':myCurrentPatchManagementPolicySoftwareVersionName}"
+					
+					
+					appendJAMF_Package_To_Patch_Management_Policy_Info = eval(appendDataToCVS_JAMF_Package_To_Patch_Management_Policy_Info)
+					appendPackageToPatchManagementPolicyColumns = appendJAMF_Package_To_Patch_Management_Policy_Info
+					
+					#Set Columns	
+					Combined = appendPackageToPatchManagementPolicyColumns
+					
+					#Set CSV File
+					dataToCsvPackageToPolicy.append(Combined)
+					
+					# For Testing
+					#print(f"Yes, Package ID: " + myCurrentPackageID + " with Package Name: " + myCurrentPackageName + " and Package FileName: "+ myPackageRecordsFileName + " is being used in Patch Management Policies ID: " + myCurrentPatchManagementPolicyID + " with Patch Management Display Name: " + myCurrentPatchManagementPolicyID + " with Patch Management Display Software Version Name: " + myCurrentPatchManagementPolicySoftwareVersionName)
+					
+					
 		else:
 			
 			# Set up url for getting information from each policy ID from JAMF API
@@ -5004,44 +7278,313 @@ if get_JAMF_Script_To_Policy_Info == ("yes"):
 # Check and make sure that either Policy or Config Profile was selected
 if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF_Configuration_Profile_Info == 'yes' or get_JAMF_Package_To_Policy_Info == 'yes' or get_JAMF_Script_To_Policy_Info == 'yes':
 	
+	
 	# Get export to csv file
 	if get_JAMF_Computers_Info == ("yes"):
-		df_computers = pd.DataFrame(dataToCsvComputers)
+		df_computers_raw = pd.DataFrame(dataToCsvComputers)
+		df_computers_sort = df_computers_raw.rename_axis('MyIdx').sort_values(by = ['Computer ID', 'MyIdx'])
+		df_computers = df_computers_sort.reset_index(drop=True)
 		
 	if get_JAMF_Policy_Info == ("yes"):
-		df_policy = pd.DataFrame(dataToCsvPolicy)
+		df_policy_raw = pd.DataFrame(dataToCsvPolicy)
+		df_policy_sort = df_policy_raw.rename_axis('MyIdx').sort_values(by = ['Policy ID', 'MyIdx'])
+		df_policy = df_policy_sort.reset_index(drop=True)
 		
 	if get_JAMF_Configuration_Profile_Info == ("yes"):	
-		df_configProfile = pd.DataFrame(dataToCsvConfigurationProfile)
+		df_configProfile_raw = pd.DataFrame(dataToCsvConfigurationProfile)
+		df_configProfile_sort = df_configProfile_raw.rename_axis('MyIdx').sort_values(by = ['Configuration Profile ID', 'MyIdx'])
+		df_configProfile = df_configProfile_sort.reset_index(drop=True)
 		
 	if get_JAMF_Package_To_Policy_Info == ("yes"):	
-		df_PackageToPolicy = pd.DataFrame(dataToCsvPackageToPolicy)
+		df_PackageToPolicy_raw = pd.DataFrame(dataToCsvPackageToPolicy)
+		df_PackageToPolicy_sort = df_PackageToPolicy_raw.rename_axis('MyIdx').sort_values(by = ['Package ID', 'MyIdx'])
+		df_PackageToPolicy = df_PackageToPolicy_sort.reset_index(drop=True)
 		
 	if get_JAMF_Script_To_Policy_Info == ("yes"):	
-		df_ScriptToPolicy = pd.DataFrame(dataToCsvScriptToPolicy)
+		df_ScriptToPolicy_raw = pd.DataFrame(dataToCsvScriptToPolicy)
+		df_ScriptToPolicy_sort = df_ScriptToPolicy_raw.rename_axis('MyIdx').sort_values(by = ['Script ID', 'MyIdx'])
+		df_ScriptToPolicy = df_ScriptToPolicy_sort.reset_index(drop=True)
 
 	
 	print('\n******************** Creating Jamf Instance Info file. ********************\n')
 	
 	
 	# We'll define an Excel writer object and the target file
+	pandas.io.formats.excel.ExcelFormatter.header_style = None
+	
 	Excelwriter = pd.ExcelWriter(excelReportFile, engine="xlsxwriter")
 	
+	
+	# Function to set Column with similar to AutoFit in Excel
+	def get_col_widths(dataframe):
+		# First we find the maximum length of the index column   
+		idx_max = max([len(str(s)) for s in dataframe.index.values] + [len(str(dataframe.index.name))])
+		
+		# Then, we concatenate this to the max of the lengths of column name and its values for each column, left to right
+		return [idx_max] + [max([len(str(s)) for s in dataframe[col].values] + [len(col)]) + 16 for col in dataframe.columns]
+	
+	# Create Excel Sheets
 	if get_JAMF_Computers_Info == ("yes"):
 		df_computers.to_excel(Excelwriter, sheet_name='Jamf Computers Info')
 		
+		# Get the xlsxwriter workbook and worksheet objects.
+		df_computers_workbook  = Excelwriter.book
+		
+		df_computers_worksheet = Excelwriter.sheets['Jamf Computers Info']
+		
+		TopRowFormat = df_computers_workbook.add_format()
+		TopRowFormat.set_bold()
+		TopRowFormat.set_font_size(16)
+		TopRowFormat.set_align('center')
+		TopRowFormat.set_align('vcenter')
+		TopRowFormat.set_bottom(2)
+		TopRowFormat.set_bg_color('#D5D8DC')
+	
+		df_computers_worksheet.set_row(0, 30, TopRowFormat)	
+		
+		
+		if usingFilter == 'computerFilter':
+			format1 = df_computers_workbook.add_format({'bg_color': '#D5D8DC'})
+			format2 = df_computers_workbook.add_format({'bg_color': '#A3E4D7'})
+			format3 = df_computers_workbook.add_format({'bg_color': '#AED6F1'})
+			format4 = df_computers_workbook.add_format({'bg_color': '#F5B7B1'})
+			format5 = df_computers_workbook.add_format({'bg_color': '#F9E79F'})
+			
+			df_computers_worksheet.conditional_format('$A2:$AA$1048576', 
+													{'type':'formula',
+														'criteria': '=$B2="Computer Configuration Profile Membership Info"',
+														'format': format1
+														})
+			
+			df_computers_worksheet.conditional_format('$A2:$AA$1048576', 
+													{'type':'formula',
+														'criteria': '=$B2="Computer Group Membership Info"',
+														'format': format2
+														})
+			
+			df_computers_worksheet.conditional_format('$A2:$AA$1048576', 
+													{'type':'formula',
+														'criteria': '=$B2="Computer Hardware Local Account Info"',
+														'format': format3
+														})
+			
+			df_computers_worksheet.conditional_format('$A2:$AA$1048576', 
+													{'type':'formula',
+														'criteria': '=$B2="Computer Hardware FileVault2 Info"',
+														'format': format4
+														})
+			
+			df_computers_worksheet.conditional_format('$A2:$AA$1048576', 
+													{'type':'formula',
+														'criteria': '=$B2="Computer Hardware Info"',
+														'format': format5
+														})
+			
+		elif usingFilter == 'smartGroupFilter':
+			format1 = df_computers_workbook.add_format({'bg_color': '#D5D8DC'})
+			format2 = df_computers_workbook.add_format({'bg_color': '#A3E4D7'})
+			format3 = df_computers_workbook.add_format({'bg_color': '#AED6F1'})
+			format4 = df_computers_workbook.add_format({'bg_color': '#F5B7B1'})
+			format5 = df_computers_workbook.add_format({'bg_color': '#F9E79F'})
+			
+			df_computers_worksheet.conditional_format('$A2:$AA$1048576', 
+													{'type':'formula',
+														'criteria': '=$D2="Computer Configuration Profile Membership Info"',
+														'format': format1
+														})
+				
+			df_computers_worksheet.conditional_format('$A2:$AA$1048576', 
+													{'type':'formula',
+														'criteria': '=$D2="Computer Group Membership Info"',
+														'format': format2
+														})
+				
+			df_computers_worksheet.conditional_format('$A2:$AA$1048576', 
+													{'type':'formula',
+														'criteria': '=$D2="Computer Hardware Local Account Info"',
+														'format': format3
+														})
+				
+			df_computers_worksheet.conditional_format('$A2:$AA$1048576', 
+													{'type':'formula',
+														'criteria': '=$D2="Computer Hardware FileVault2 Info"',
+														'format': format4
+														})
+				
+			df_computers_worksheet.conditional_format('$A2:$AA$1048576', 
+													{'type':'formula',
+														'criteria': '=$D2="Computer Hardware Info"',
+														'format': format5
+														})
+				
+		elif usingFilter == 'noFilter':
+			format1 = df_computers_workbook.add_format({'bg_color': '#D5D8DC'})
+			format2 = df_computers_workbook.add_format({'bg_color': '#A3E4D7'})
+			format3 = df_computers_workbook.add_format({'bg_color': '#AED6F1'})
+			format4 = df_computers_workbook.add_format({'bg_color': '#F5B7B1'})
+			format5 = df_computers_workbook.add_format({'bg_color': '#F9E79F'})
+			
+			df_computers_worksheet.conditional_format('$A2:$AA$1048576', 
+													{'type':'formula',
+														'criteria': '=$B2="Computer Configuration Profile Membership Info"',
+														'format': format1
+														})
+			
+			df_computers_worksheet.conditional_format('$A2:$AA$1048576', 
+													{'type':'formula',
+														'criteria': '=$B2="Computer Group Membership Info"',
+														'format': format2
+														})
+			
+			df_computers_worksheet.conditional_format('$A2:$AA$1048576', 
+													{'type':'formula',
+														'criteria': '=$B2="Computer Hardware Local Account Info"',
+														'format': format3
+														})
+			
+			df_computers_worksheet.conditional_format('$A2:$AA$1048576', 
+													{'type':'formula',
+														'criteria': '=$B2="Computer Hardware FileVault2 Info"',
+														'format': format4
+														})
+			
+			df_computers_worksheet.conditional_format('$A2:$AA$1048576', 
+													{'type':'formula',
+														'criteria': '=$B2="Computer Hardware Info"',
+														'format': format5
+														})
+			
+			
+		for i, width in enumerate(get_col_widths(df_computers)):
+			df_computers_worksheet.set_column(i, i, width)
+			
+		
 	if get_JAMF_Policy_Info == ("yes"):
 		df_policy.to_excel(Excelwriter, sheet_name='Jamf Policy Info')
+		
+		# Get the xlsxwriter workbook and worksheet objects.
+		
+		df_policy_workbook  = Excelwriter.book
+		
+		df_policy_worksheet = Excelwriter.sheets['Jamf Policy Info']
+		
+		format1 = df_policy_workbook.add_format({'bg_color': '#82E0AA'})
+		
+		TopRowFormat = df_policy_workbook.add_format()
+		TopRowFormat.set_bold()
+		TopRowFormat.set_font_size(16)
+		TopRowFormat.set_align('center')
+		TopRowFormat.set_align('vcenter')
+		TopRowFormat.set_bottom(2)
+		TopRowFormat.set_bg_color('#D5D8DC')
+		
+		df_policy_worksheet.set_row(0, 30, TopRowFormat)
+		
+		df_policy_worksheet.conditional_format('$A$2:$AA$1048576', 
+												{'type':'formula',
+												'criteria': '=ISODD(SUM(IF(FREQUENCY(MATCH($C$2:$C2,$C$2:$C2,0),MATCH($C$2:$C2,$C$2:$C2,0))>0,1)))',
+												'format': format1
+												})
+		
+		
+		for i, width in enumerate(get_col_widths(df_policy)):
+			df_policy_worksheet.set_column(i, i, width)	
+	
 	
 	if get_JAMF_Configuration_Profile_Info == ("yes"):
 		df_configProfile.to_excel(Excelwriter, sheet_name='Jamf Configuration Profile Info')
 		
+		# Get the xlsxwriter workbook and worksheet objects.
+		
+		df_configProfile_workbook  = Excelwriter.book
+		
+		df_configProfile_worksheet = Excelwriter.sheets['Jamf Configuration Profile Info']
+		
+		format1 = df_configProfile_workbook.add_format({'bg_color': '#82E0AA'})
+		
+		TopRowFormat = df_configProfile_workbook.add_format()
+		TopRowFormat.set_bold()
+		TopRowFormat.set_font_size(16)
+		TopRowFormat.set_align('center')
+		TopRowFormat.set_align('vcenter')
+		TopRowFormat.set_bottom(2)
+		TopRowFormat.set_bg_color('#D5D8DC')
+		
+		df_configProfile_worksheet.set_row(0, 30, TopRowFormat)
+		
+		df_configProfile_worksheet.conditional_format('$A$2:$AA$1048576', 
+													 {'type':'formula',
+												      'criteria': '=ISODD(SUM(IF(FREQUENCY(MATCH($C$2:$C2,$C$2:$C2,0),MATCH($C$2:$C2,$C$2:$C2,0))>0,1)))',
+												      'format': format1
+												     })
+		
+		
+		for i, width in enumerate(get_col_widths(df_configProfile)):
+			df_configProfile_worksheet.set_column(i, i, width)	
+			
 	if get_JAMF_Package_To_Policy_Info == ("yes"):
 		df_PackageToPolicy.to_excel(Excelwriter, sheet_name='Jamf Packages To Policy Info')
 		
+		# Get the xlsxwriter workbook and worksheet objects.
+		
+		df_PackageToPolicy_workbook  = Excelwriter.book
+		
+		df_PackageToPolicy_worksheet = Excelwriter.sheets['Jamf Packages To Policy Info']
+		
+		format1 = df_PackageToPolicy_workbook.add_format({'bg_color': '#82E0AA'})
+		
+		TopRowFormat = df_PackageToPolicy_workbook.add_format()
+		TopRowFormat.set_bold()
+		TopRowFormat.set_font_size(16)
+		TopRowFormat.set_align('center')
+		TopRowFormat.set_align('vcenter')
+		TopRowFormat.set_bottom(2)
+		TopRowFormat.set_bg_color('#D5D8DC')
+		
+		df_PackageToPolicy_worksheet.set_row(0, 30, TopRowFormat)
+		
+		df_PackageToPolicy_worksheet.conditional_format('$A2:$AA$1048576', 
+												 {'type':'formula',
+												  'criteria': '=$B2="Package Not Used"',
+												  'format': format1
+												  })
+		
+
+		for i, width in enumerate(get_col_widths(df_PackageToPolicy)):
+			df_PackageToPolicy_worksheet.set_column(i, i, width)	
+		
 	if get_JAMF_Script_To_Policy_Info == ("yes"):
 		df_ScriptToPolicy.to_excel(Excelwriter, sheet_name='Jamf Scripts To Policy Info')
+		
+		# Get the xlsxwriter workbook and worksheet objects.
+		
+		df_ScriptToPolicy_workbook  = Excelwriter.book
+		
+		df_ScriptToPolicy_worksheet = Excelwriter.sheets['Jamf Scripts To Policy Info']
+		
+		format1 = df_ScriptToPolicy_workbook.add_format({'bg_color': '#82E0AA'})
+		
+		TopRowFormat = df_ScriptToPolicy_workbook.add_format()
+		TopRowFormat.set_bold()
+		TopRowFormat.set_font_size(16)
+		TopRowFormat.set_align('center')
+		TopRowFormat.set_align('vcenter')
+		TopRowFormat.set_bottom(2)
+		TopRowFormat.set_bg_color('#D5D8DC')
+		
+		df_ScriptToPolicy_worksheet.set_row(0, 30, TopRowFormat)
+		
+		df_ScriptToPolicy_worksheet.conditional_format('$A2:$AA$1048576', 
+													  {'type':'formula',
+												       'criteria': '=$B2="Script Not Used"',
+												       'format': format1
+												      })
+		
+		
+		for i, width in enumerate(get_col_widths(df_ScriptToPolicy)):
+			df_ScriptToPolicy_worksheet.set_column(i, i, width)
 	
+		
 	#And finally we save the file
 	Excelwriter.save()
 	
