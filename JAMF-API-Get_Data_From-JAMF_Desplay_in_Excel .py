@@ -16,6 +16,10 @@
 #	Version 7.0	- Adding Configuration Profile Membership to Computers Sheet in report.
 #	Version 7.0 - Adding Default file path and file name to choice with date and time.
 #	Version 8.0 - Adding Script to Policy lookup for unused Scripts.
+#	Version 9.0 - Adding Multithreading to Computer, Policy, and Configuration Profile
+#				  sections to increase performance for those reports.
+#				- Formated excel sheets with color highlighting, auto column with for
+#				  data, and formated titles and headers to make easier to read.
 #
 #	This script take User Imput and will call the JAMF API and get all Information 
 #	related to a Policy, Configuration Profile, and Computers.
@@ -180,6 +184,15 @@
 #	PreStage Policy Name if used 
 #	in PreStage Policy
 #
+#	Patch Management Policy ID if used 
+#	in Patch Management Policy
+#
+#	Patch Management Policy Name if used 
+#	in Patch Management Policy
+#
+#	Patch Management Policy Software Version
+#	Name if used in Patch Management Policy
+#
 #
 ##################################################
 #	Script to Policy lookup
@@ -204,7 +217,7 @@
 #	Additional Info
 ##################################################
 #
-#	The only requirement is that you have Python3 on the device. All other libraries
+#	The only requirement is that you have Python 3.9 + on the device. All other libraries
 #	the script will look for them and download if they are not found.
 #
 #	Run from terminal and answer the 3 fields. URL, API Username, API Password.
