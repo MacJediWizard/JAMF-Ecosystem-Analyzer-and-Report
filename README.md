@@ -2,7 +2,7 @@
 	
 ### This script runs api calls to get information on Policies, Scripts in Policies, Packages in Policies, Scope in policies, Configuration Profiles, Scopes in Configuration profiles, and Package to Policy It saves the information in a xlsx document for working with in Excel or similar. 
 		
-### The Script runs on Python 3.9 + and uses the Libraries "Requests", "Pandas", "openpyxl", and "xlsxwriter". There is a check built in so as long as you have Python3 installed, the other libraries will be installed automatically with pip3.
+### The Script runs on Python 3.9 + and uses the Libraries "Requests", "Pandas", "openpyxl", "xlsxwriter", and "xmltodict". There is a check built in so as long as you have Python 3.9 + installed, the other libraries will be installed automatically with pip3.
 
 
 ##	Fields returned in Excel are as follows below:
@@ -157,6 +157,15 @@
 	
 		PreStage Policy Name if used 
 		in PreStage Policy	
+		
+		Patch Management Policy ID if used 
+		in Patch Management Policy
+		
+		Patch Management Policy Name if used 
+		in Patch Management Policy
+		
+		Patch Management Policy Software Version
+		Name if used in Patch Management Policy
 
 
 
