@@ -288,10 +288,7 @@ from requests.auth import HTTPBasicAuth
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from requests.exceptions import HTTPError
-# New MultiThread libraries
-from concurrent.futures import ThreadPoolExecutor
-from functools import partial
-import pandas.io.formats.excel
+
 
 #For CSV processing with Pandas Library
 try:
@@ -327,7 +324,13 @@ except ImportError:
 	os.system('pip3 install xmltodict')
 	time.sleep(3)
 	import xmltodict
+
 	
+# New MultiThread libraries
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
+import pandas.io.formats.excel
+
 
 ##########################################################################################
 # Variables
