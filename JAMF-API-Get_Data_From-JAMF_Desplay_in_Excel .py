@@ -21,6 +21,9 @@
 #				- Formated excel sheets with color highlighting, auto column with for
 #				  data, and formated titles and headers to make easier to read.
 #
+#	Version 10.0 - Adding last checkin and site info to computer info.
+#
+#
 #	This script take User Imput and will call the JAMF API and get all Information 
 #	related to a Policy, Configuration Profile, and Computers.
 #
