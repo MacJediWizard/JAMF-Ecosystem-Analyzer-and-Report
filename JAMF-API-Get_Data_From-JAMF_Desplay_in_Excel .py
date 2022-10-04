@@ -108,6 +108,10 @@
 #
 #		Computer Serial Number
 #
+#		Computer Last Check-in
+#
+#		Computer Site Info
+#
 #	If you are not usingFilter or just single computer
 #
 #		Computer Record Type
@@ -117,6 +121,10 @@
 #		Computer Name
 #
 #		Computer Serial Number
+#
+#		Computer Last Check-in
+#
+#		Computer Site Info
 #
 #
 #	Computer Make
@@ -1122,7 +1130,11 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 		\
 		'Computer Name':'',\
 		\
-		'Computer Serial Number':''}"
+		'Computer Serial Number':'',\
+		\
+		'Computer Last Check-in':'',\
+		\
+		'Computer Site Info':''}"
 		
 	elif usingFilter == 'smartGroupFilter':
 		
@@ -1136,7 +1148,11 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 		\
 		'Computer Name':'',\
 		\
-		'Computer Serial Number':''}"
+		'Computer Serial Number':'',\
+		\
+		'Computer Last Check-in':'',\
+		\
+		'Computer Site Info':''}"
 		
 	elif usingFilter == 'noFilter':
 		
@@ -1146,7 +1162,11 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 		\
 		'Computer Name':'',\
 		\
-		'Computer Serial Number':''}"
+		'Computer Serial Number':'',\
+		\
+		'Computer Last Check-in':'',\
+		\
+		'Computer Site Info':''}"
 		
 	
 	dataToCVS_JAMF_Computers_Hardware_Info = "{'Computer Make':'',\
@@ -1364,7 +1384,11 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 		\
 		'Computer Name':'',\
 		\
-		'Computer Serial Number':''}"
+		'Computer Serial Number':'',\
+		\
+		'Computer Last Check-in':'',\
+		\
+		'Computer Site Info':''}"
 		
 	elif usingFilter == 'smartGroupFilter':
 		
@@ -1378,7 +1402,11 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 		\
 		'Computer Name':'',\
 		\
-		'Computer Serial Number':''}"
+		'Computer Serial Number':'',\
+		\
+		'Computer Last Check-in':'',\
+		\
+		'Computer Site Info':''}"
 		
 	elif usingFilter == 'noFilter':
 		
@@ -1388,7 +1416,11 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 		\
 		'Computer Name':'',\
 		\
-		'Computer Serial Number':''}"
+		'Computer Serial Number':'',\
+		\
+		'Computer Last Check-in':'',\
+		\
+		'Computer Site Info':''}"
 		
 		
 
@@ -1996,7 +2028,11 @@ if get_JAMF_Computers_Info == ("yes"):
 			\
 			'Computer Name':mycomputerRecordGeneral['name'],\
 			\
-			'Computer Serial Number':str(mycomputerRecordGeneral['serial_number'])}"
+			'Computer Serial Number':str(mycomputerRecordGeneral['serial_number']),\
+			\
+			'Computer Last Check-in':str(mycomputerRecordGeneral['last_contact_time']),\
+			\
+			'Computer Site Info':str(mycomputerRecordGeneral['site']['name'])}"
 			
 		elif usingFilter == 'smartGroupFilter':
 			
@@ -2010,7 +2046,11 @@ if get_JAMF_Computers_Info == ("yes"):
 			\
 			'Computer Name':mycomputerRecordGeneral['name'],\
 			\
-			'Computer Serial Number':str(mycomputerRecordGeneral['serial_number'])}"
+			'Computer Serial Number':str(mycomputerRecordGeneral['serial_number']),\
+			\
+			'Computer Last Check-in':str(mycomputerRecordGeneral['last_contact_time']),\
+			\
+			'Computer Site Info':str(mycomputerRecordGeneral['site']['name'])}"
 			
 		elif usingFilter == 'noFilter':
 			
@@ -2020,7 +2060,11 @@ if get_JAMF_Computers_Info == ("yes"):
 			\
 			'Computer Name':mycomputerRecordGeneral['name'],\
 			\
-			'Computer Serial Number':str(mycomputerRecordGeneral['serial_number'])}"
+			'Computer Serial Number':str(mycomputerRecordGeneral['serial_number']),\
+			\
+			'Computer Last Check-in':str(mycomputerRecordGeneral['last_contact_time']),\
+			\
+			'Computer Site Info':str(mycomputerRecordGeneral['site']['name'])}"
 			
 			
 		appendJAMF_Computers_Info = eval(appendDataToCVS_JAMF_Computers_Info)
@@ -2542,7 +2586,11 @@ if get_JAMF_Computers_Info == ("yes"):
 				\
 				'Computer Name':mycomputerRecordGeneral['name'],\
 				\
-				'Computer Serial Number':str(mycomputerRecordGeneral['serial_number'])}"
+				'Computer Serial Number':str(mycomputerRecordGeneral['serial_number']),\
+				\
+				'Computer Last Check-in':str(mycomputerRecordGeneral['last_contact_time']),\
+				\
+				'Computer Site Info':str(mycomputerRecordGeneral['site']['name'])}"
 				
 			elif usingFilter == 'smartGroupFilter':
 				
@@ -2556,7 +2604,11 @@ if get_JAMF_Computers_Info == ("yes"):
 				\
 				'Computer Name':mycomputerRecordGeneral['name'],\
 				\
-				'Computer Serial Number':str(mycomputerRecordGeneral['serial_number'])}"
+				'Computer Serial Number':str(mycomputerRecordGeneral['serial_number']),\
+				\
+				'Computer Last Check-in':str(mycomputerRecordGeneral['last_contact_time']),\
+				\
+				'Computer Site Info':str(mycomputerRecordGeneral['site']['name'])}"
 				
 			elif usingFilter == 'noFilter':
 				
@@ -2566,7 +2618,11 @@ if get_JAMF_Computers_Info == ("yes"):
 				\
 				'Computer Name':mycomputerRecordGeneral['name'],\
 				\
-				'Computer Serial Number':str(mycomputerRecordGeneral['serial_number'])}"
+				'Computer Serial Number':str(mycomputerRecordGeneral['serial_number']),\
+				\
+				'Computer Last Check-in':str(mycomputerRecordGeneral['last_contact_time']),\
+				\
+				'Computer Site Info':str(mycomputerRecordGeneral['site']['name'])}"
 				
 				
 			appendJAMF_Computers_Info = eval(appendDataToCVS_JAMF_Computers_Info)

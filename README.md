@@ -24,6 +24,10 @@
 			Computer Name
 			
 			Computer Serial Number
+			
+			Computer Last Check-in
+			
+			Computer Site Info
 		
 		If you are not using Filter or just one computer
 		
@@ -34,7 +38,11 @@
 			Computer Name
 			
 			Computer Serial Number
-		
+			
+			Computer Last Check-in
+			
+			Computer Site Info
+			
 		
 		Computer Make
 		
@@ -220,3 +228,4 @@
 		It will also look up all JIM servers and let you choose the one you want to use.
 		
 		The script now uses the new bearer token for auth in API calls.
+		
