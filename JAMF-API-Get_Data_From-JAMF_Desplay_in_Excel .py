@@ -6320,7 +6320,7 @@ if get_JAMF_Computers_Info == 'yes' or get_JAMF_Policy_Info == 'yes' or get_JAMF
 	
 		
 	#And finally we save the file
-	Excelwriter.save()
+	Excelwriter.close()
 	
 	print("\n******************** Jamf Instance Info file is now Complete. ********************\n")
 	
