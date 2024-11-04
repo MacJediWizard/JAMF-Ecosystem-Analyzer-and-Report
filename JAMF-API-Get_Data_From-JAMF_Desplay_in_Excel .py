@@ -22,9 +22,12 @@
 #				  data, and formated titles and headers to make easier to read.
 #
 #	Version 10.0 - Adding last checkin and site info to computer info.
+#	Version 10.1 - Bug fixes and code cleanup. Now works with jamf cloud 
+# 				   version 11.10.2-t1729874551. Will need to update and test 
+# 				   with new api endpoints and endpoint depreciations.
 #
 #
-#	This script take User Imput and will call the JAMF API and get all Information 
+#	This script take User Input and will call the JAMF API and get all Information 
 #	related to a Policy, Configuration Profile, and Computers.
 #
 #	It looks up all selected Info and then returns an Excel spreadsheet.
@@ -356,7 +359,7 @@ JIMServerList = []
 
 
 #To check User login in JAMF API
-get_JAMF_URL_User_Test = "/JSSResource/accounts/username/"
+get_JAMF_URL_User_Test = "/api/v1/auth/token"
 
 
 # For default Local User Accounts you do not want in the List
@@ -470,7 +473,7 @@ def MergeConfigProfileInfo(dict1, dict2, dict3):
 #Check User Input for URL, Username, and Password
 def JAMFInfoCheck(url, username, password):
 	try:
-		response = http.get(url, headers=headers, auth = HTTPBasicAuth(username, password))
+		response = http.post(url, headers=headers, auth = HTTPBasicAuth(username, password))
 		if response.status_code == 200:
 			return print(f"\nUser Input is OK, we can connect to JAMF API, Moving on.\n\n")
 		else:
@@ -651,7 +654,11 @@ else:
 
 
 #Check User Input for URL, Username, and Password
-JAMFInfoCheck((get_JAMF_URL+get_JAMF_URL_User_Test+get_JAMF_API_Username), get_JAMF_API_Username, get_JAMF_API_Password)
+#print (get_JAMF_URL+get_JAMF_URL_User_Test)
+#print(get_JAMF_API_Username)
+#print(get_JAMF_API_Password)
+
+JAMFInfoCheck((get_JAMF_URL+get_JAMF_URL_User_Test), get_JAMF_API_Username, get_JAMF_API_Password)
 
 
 ##########################################################################################
@@ -4907,7 +4914,7 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 		
 		# Find all patch Policy ID
 		try:
-			patchManagementPolicyPackagesResponse = http.get(allPatchPolicies, headers=headers, auth = HTTPBasicAuth(username, password))
+			patchManagementPolicyPackagesResponse = http.get(allPatchPolicies, headers=btHeaders)
 			
 			patchManagementPolicyPackagesResponse.raise_for_status()
 			
@@ -4966,11 +4973,11 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 				print(f'Other error occurred: {err}')	
 				
 			#For Testing
-			#print(resp['patch_policy']['software_title_configuration_id'])
+			# print(resp['patch_policy']['software_title_configuration_id'])
 				
 			pmSoftwareTitleConfigurationID = str(resp['patch_policy']['software_title_configuration_id'])
 			
-			#print(pmSoftwareTitleConfigurationID)
+			# print(pmSoftwareTitleConfigurationID)
 			
 			try:
 				patchManagementSoftwareTitleConfigurationInfo = http.get(patchSoftwareTitlesByID+pmSoftwareTitleConfigurationID, headers=btBrokenXMLHeaders)
@@ -4985,7 +4992,7 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 				print(f'Other error occurred: {err}')	
 				
 			#For Testing
-			#print(resp['patch_software_title'])
+			# print(resp['patch_software_title'])
 				
 			patchManagementPolicyDisplayName = resp['patch_software_title']['name']
 			pmSoftwareTitleVersionInfo = resp['patch_software_title']['versions']['version']
@@ -5005,7 +5012,7 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 					
 					patchManagementPolicyPackagesList.append(patchManagementPolicyPackagesDict)
 					
-					
+		# For Testing
 		#print(patchManagementPolicyPackagesList)
 	
 	
@@ -5114,7 +5121,7 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 						continue
 						
 					# for testing
-					#print(getMyPackageRecords['package']['id'])
+					# print(getMyPackageRecords['package']['id'])
 						
 						
 					#Set Variables if Data Available
@@ -5158,7 +5165,7 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 					dataToCsvPackageToPolicy.append(Combined)
 					
 					# For Testing
-					#print(f"Yes, Package ID: " + myCurrentPackageID + " with Package Name: " + myCurrentPackageName + " and Package File Name: " + myPackageRecordsFileName + ", is being used by Policy ID: " + str(myCurrentPolicyID) + " with Policy Name: " + myCurrentPolicyName)
+					# print(f"Yes, Package ID: " + myCurrentPackageID + " with Package Name: " + myCurrentPackageName + " and Package File Name: " + myPackageRecordsFileName + ", is being used by Policy ID: " + str(myCurrentPolicyID) + " with Policy Name: " + myCurrentPolicyName)
 			
 			
 			for preStagePolicy in preStagePolicyPackagesList:
@@ -5174,7 +5181,7 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 					url = JAMF_url + "/JSSResource/packages/id/" + str(packageRecordsID)
 					
 					try:
-						myPackageRecordsResponse = http.get(url, headers=headers, auth = HTTPBasicAuth('jamf-api', 'J@MF@P!acc3s$'))
+						myPackageRecordsResponse = http.get(url, headers=btHeaders)
 						
 						myPackageRecordsResponse.raise_for_status()
 						
@@ -5263,7 +5270,7 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 					url = JAMF_url + "/JSSResource/packages/id/" + str(packageRecordsID)
 					
 					try:
-						myPackageRecordsResponse = http.get(url, headers=headers, auth = HTTPBasicAuth('jamf-api', 'J@MF@P!acc3s$'))
+						myPackageRecordsResponse = http.get(url, headers=btHeaders)
 						
 						myPackageRecordsResponse.raise_for_status()
 						
@@ -5290,8 +5297,8 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 						continue
 					
 					
-					
-					#print(getMyPackageRecords['package']['id'])
+					print("I am here in patch management policy")
+					print(getMyPackageRecords['package']['id'])
 					
 					
 					#Set Variables if Data Available
@@ -5541,7 +5548,7 @@ if get_JAMF_Package_To_Policy_Info == ("yes"):
 					url = JAMF_url + "/JSSResource/packages/id/" + str(packageRecordsID)
 					
 					try:
-						myPackageRecordsResponse = http.get(url, headers=headers, auth = HTTPBasicAuth('jamf-api', 'J@MF@P!acc3s$'))
+						myPackageRecordsResponse = http.get(url, headers=btHeaders)
 						
 						myPackageRecordsResponse.raise_for_status()
 						
