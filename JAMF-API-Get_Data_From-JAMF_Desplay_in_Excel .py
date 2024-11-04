@@ -23,8 +23,7 @@
 #
 #	Version 10.0 - Adding last checkin and site info to computer info.
 #	Version 10.1 - Bug fixes and code cleanup. Now works with jamf cloud 
-# 				   version 11.10.2-t1729874551. Will need to update and test 
-# 				   with new api endpoints and endpoint depreciations.
+# 				   version 11.10.2-t1729874551.
 #
 #
 #	This script take User Input and will call the JAMF API and get all Information 
