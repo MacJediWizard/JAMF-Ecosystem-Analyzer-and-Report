@@ -1,3 +1,17 @@
+# JAMF-Ecosystem-Analyzer-and-Report
+
+## 🎤 Related: JNUC 2022 Presentation
+
+I presented at Jamf Nation User Conference 2022 on **"Cleaning Up and Maintaining Jamf After the Previous Admin"** - this tool is part of that workflow for auditing and analyzing your Jamf environment.
+
+[Watch the JNUC Session](https://www.jamf.com/resources/videos/cleaning-up-and-maintaining-jamf-after-the-previous-admin/)
+
+---
+
+### This script runs API calls to get information on...
+
+
+
 # JAMF-API-Get_Data_From-JAMF_Desplay_in_Excel
 	
 ### This script runs api calls to get information on Policies, Scripts in Policies, Packages in Policies, Scope in policies, Configuration Profiles, Scopes in Configuration profiles, and Package to Policy It saves the information in a xlsx document for working with in Excel or similar. 
